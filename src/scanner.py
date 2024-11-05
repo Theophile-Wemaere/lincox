@@ -1,11 +1,9 @@
 from src import toolbox
-from src import webutils
-import socket
-import threading
+from src import webutils as wu
+from src import networkutils as nu
 import re
 import os
-import ping3
-import shlex
+
 
 COMMON_PORTS = [80,443,8000,8080,8081,8443]
 
@@ -31,7 +29,12 @@ class Target:
         self.__check_target_protocol()
         
         # check if target is alive
-        self.__ping_target()
+        alive = nu.ping_target(self.address)
+        if alive:
+            toolbox.debug(f"{self.address} is up!")
+        else:
+            toolbox.debug(f"{self.address} is down!")
+            toolbox.exit_error(f"{self.address} is down, use -f to scan anyway",0)
 
         print(f"Target is valid, launching discovery on {self.address}")
 
@@ -89,56 +92,21 @@ class Target:
                 self.port = re.match(port_regex,self.target).group(1)
                 toolbox.debug(f"Found port in target : {self.port}")
 
-    def __ping_target(self):
-        """
-        check if target is alive
-        """
-
-        if self.target == None:
-            toolbox.exit_error("Error, trying to ping but no address specified",1)
-        
-        response = ping3.ping(self.address)
-        if response:
-            toolbox.debug(f"{self.address} is up!")
-        else:
-            toolbox.debug(f"{self.address} is down!")
-            toolbox.exit_error(f"{self.address} is down, use -f to scan anyway",0)
-
     def search_services(self):
         """
         search for services on the target
         need to be run after initialize() function
         """
 
+        to_scan = COMMON_PORTS
+
         if hasattr(self,'port'):
-            self.ports.append(int(self.port))
+            to_scan += int(self.port)
 
-        from contextlib import closing
-
-        for port in COMMON_PORTS:
-            with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
-                sock.settimeout(3)
-                if sock.connect_ex((self.address, port)) == 0:
-                    print(f"Port {port} is open")
-                    self.ports.append(port)
-                else:
-                    print(f"Port {port} is not open")
-            # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # result = sock.connect_ex((self.address,port))
-            # if result == 0:
-            #     self.ports.append(port)
-            #     toolbox.debug(f"Port {port} is open on {self.adress}")
-            # sock.close()
+        self.ports = nu.scan_ports(self.address,to_scan)
 
         
         if len(self.ports) == 0:
-            toolbox.exit_error(f"No open ports found on {address}, use -p to specify port(s) to scan",0)
+            toolbox.exit_error(f"No open ports found on {self.address}, use -p to specify port(s) to scan",0)
 
-        toolbox.debug(f"Open ports found on {self.address} : {",".join(self.ports)}")
-
-    def __scan_ports(self,ports:list):
-        """
-        scan for open ports
-        ports in an array of int
-        return the array of port open
-        """
+        print(f"Open ports found on {self.address} : {",".join([str(port) for port in self.ports])}")
