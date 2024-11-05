@@ -11,7 +11,6 @@ class Target:
 
     def __init__(self,target: str):
         self.target = target
-        self.ports = []
 
     def initialize(self):
         """
@@ -104,9 +103,16 @@ class Target:
             to_scan += int(self.port)
 
         self.ports = nu.scan_ports(self.address,to_scan)
-
         
         if len(self.ports) == 0:
             toolbox.exit_error(f"No open ports found on {self.address}, use -p to specify port(s) to scan",0)
 
         print(f"Open ports found on {self.address} : {",".join([str(port) for port in self.ports])}")
+        print("Enumerating services...")
+        self.services = nu.nmap_scan(self.address,",".join([str(port) for port in self.ports]))
+        f = False
+        for service in self.services:
+            if self.services[service]["name"] == "http":
+                f = True
+        if not f:
+            toolbox.exit_error(f"No WEB services found on {self.address}, exiting",0)

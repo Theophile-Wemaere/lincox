@@ -2,6 +2,7 @@ from src import toolbox
 import socket
 import ping3
 import threading
+import nmap
 
 def ping_target(address: str)-> bool:
     """
@@ -19,6 +20,7 @@ def ping_target(address: str)-> bool:
 def scan_ports(address:str, ports:list)-> list:
     """
     scan for open ports
+    address is a str (ip or domain)
     ports in an array of int
     return the array of port open
     """
@@ -58,4 +60,25 @@ def scan_ports(address:str, ports:list)-> list:
 
     return open_ports
 
-    
+def nmap_scan(address: str, ports: str)-> dict:
+    """
+    perform NMAP scans on given ports
+    address is a str (ip or domain)
+    ports is a nnmap friendly str of ports
+    return dict with open ports and service detected
+    """
+
+    open_ports = {}
+
+    nm = nmap.PortScanner()
+    nm.scan(address, ports)
+
+    for port in nm[address]['tcp'].keys():
+        data = nm[address]['tcp'][port]
+        if data["state"] == "open":
+            open_ports[port] = {}
+            open_ports[port]["name"] = data["name"]
+            open_ports[port]["product"] = data["product"]
+            print(f"Port {port} is open : {data['name']}/{data['product']}")
+
+    return open_ports
