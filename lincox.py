@@ -28,6 +28,8 @@ def main():
         target = scanner.Target(args.target)
         target.initialize()
         target.search_services()
+        # TODO : optional add other services enumeration, CPE fetching and CVE fetching with online API
+        target.enumerate_web_services()
 
     if SHOW_HELP:
         parser.print_help()

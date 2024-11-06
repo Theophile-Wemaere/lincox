@@ -116,3 +116,12 @@ class Target:
                 f = True
         if not f:
             toolbox.exit_error(f"No WEB services found on {self.address}, exiting",0)
+
+    def enumerate_web_services(self):
+        """
+        crawl and fuzz on webservice discovered
+        must be run after search_service() function
+        """
+
+        # TODO : add crawler
+        # TODO : add Fuzzer
