@@ -1,8 +1,31 @@
 from src import toolbox
 import socket
+import re
 import ping3
 import threading
 import nmap
+
+def get_domain(url)-> str:
+    """
+    take a URL str as arg
+    return domain as str
+    """
+
+    ip_regex = r"^(((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4})$"
+    domain_regex = r"^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/\n]+)"
+
+
+    if re.match(ip_regex,url):
+        address = re.match(ip_regex,url).group(1)
+    # else try domain name
+    elif re.match(domain_regex,url):
+        address = re.match(domain_regex,url).group(1) # isdomain
+    else:
+        address = -1
+
+    return address
+    
+
 
 def ping_target(address: str)-> bool:
     """
@@ -69,6 +92,8 @@ def nmap_scan(address: str, ports: str)-> dict:
     """
 
     open_ports = {}
+
+    address = socket.gethostbyname(address)
 
     nm = nmap.PortScanner()
     nm.scan(address, ports)

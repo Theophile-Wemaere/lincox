@@ -123,5 +123,19 @@ class Target:
         must be run after search_service() function
         """
 
+        visited_urls = []
+
+        for service in self.services:
+            data = self.services[service]
+            if data["name"] == "http":
+                protocol = "http"
+                if hasattr(self,'protocol'):
+                    protocol = self.protocol
+                if str(service).find("443") != -1:
+                    protocol = "https"
+                print(f"Running crawler on {self.address}:{service}")
+                visited_urls += [f"{protocol}://{self.address}:{service}"]
+                visited_urls += wu.Crawler(urls=visited_urls).run()
+                print(visited_urls)
         # TODO : add crawler
         # TODO : add Fuzzer
