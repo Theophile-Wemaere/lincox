@@ -39,4 +39,4 @@ def debug(msg):
     """
 
     if DEBUG:
-        print(msg)
+        print("[DEBUG]",msg)

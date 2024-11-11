@@ -1,3 +1,5 @@
 ping3
 alive_progress
 python-nmap
+requests
+bs4
