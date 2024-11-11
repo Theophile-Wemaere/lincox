@@ -139,3 +139,27 @@ class Target:
                 print(visited_urls)
         # TODO : add crawler
         # TODO : add Fuzzer
+
+    def enumerate_subdomains(self):
+        """
+        enumerate subdomains
+        for now only use ctr.sh
+        """
+
+        if self.type != "domain":
+            print(f"Given target {self.address} is not a domain, skipping...")
+        else:
+            domains = wu.get_crt_domains(self.address)
+            if len(domains) == 0:
+                print(f"No domains found with crt.sh for {self.address}")
+                return
+            alives = []
+            for domain in domains:
+                alive = nu.ping_target(domain)
+                if alive:
+                    alives.append(domain)
+
+            print(f"Found {len(alives)} domains alive, saving to {self.address}_subdomains.txt")
+            with open(f"{self.address}_subdomains.txt","w") as file:
+                for domain in alives:
+                    file.write(domain+"\n")
