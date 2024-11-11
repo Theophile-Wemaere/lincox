@@ -13,6 +13,7 @@ def main():
     parser = argparse.ArgumentParser(description='lincox, the python security scanner for web applications (and more)')
 
     parser.add_argument("-t","--target", nargs='?', dest="target" ,const='target', help="Target to scan (IP or domain name)")
+    parser.add_argument("-f","--force", action="store_true" ,dest="force", help="Force enumeration if target is down")
     parser.add_argument("-sd","--subdomains", action="store_true" ,dest="subdomain", help="Perform subdomain enumeration")
 
     # debug options
@@ -31,7 +32,11 @@ def main():
     if args.target:
         SHOW_HELP = False
 
-        target = scanner.Target(args.target)
+        force = False
+        if args.force:
+            force = True
+
+        target = scanner.Target(args.target,force)
         if not args.load:
             target.initialize()
             target.search_services()
