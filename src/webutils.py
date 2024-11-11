@@ -3,6 +3,7 @@ from src import networkutils as nu
 from urllib.parse import urljoin
 import requests
 import bs4
+import json
 
 class Crawler:
 
@@ -51,3 +52,23 @@ class Crawler:
                 self.visited_urls.append(url)
         
         return self.visited_urls
+
+def get_crt_domains(address: str)-> list:
+    """
+    use the API of ctr.sh to find domains names using SSL certificates
+    """
+
+    r = requests.get(f"https://crt.sh/?q={address}&output=json")
+    json_data = json.loads(r.text)
+    # print(json.dumps(json_data,indent=1))
+    domains = []
+    for entry in json_data:
+        domains.append(entry["common_name"])
+        if entry["name_value"].find('\n') != -1:
+            domains += entry["name_value"].split('\n')
+        else:
+            domains.append(entry["name_value"])
+    domains = list(set(domains))
+    for domain in domains:
+        toolbox.debug(domain)
+    return domains
