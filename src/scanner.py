@@ -4,7 +4,6 @@ from src import networkutils as nu
 import re
 import os
 
-
 COMMON_PORTS = [80,443,8000,8080,8081,8443]
 
 class Target:
@@ -128,21 +127,44 @@ class Target:
         """
 
         visited_urls = []
+        fuzzed_urls = []
+        wordlist = "data/wordlist.txt"
 
+        print(f"Running Crawler on {self.target}")
         for service in self.services:
             data = self.services[service]
             if data["name"] == "http":
                 protocol = "http"
                 if hasattr(self,'protocol'):
                     protocol = self.protocol
+
+                url = f"{protocol}://{self.address}:{service}"
+
+                if str(service).find("80") != -1:
+                    url = f"http://{self.address}"
+
                 if str(service).find("443") != -1:
-                    protocol = "https"
-                print(f"Running crawler on {self.address}:{service}")
-                visited_urls += [f"{protocol}://{self.address}:{service}"]
+                    url = f"https://{self.address}"
+
+                visited_urls += [url]
                 visited_urls += wu.Crawler(urls=visited_urls).run()
-                print(visited_urls)
-        # TODO : add crawler
-        # TODO : add Fuzzer
+
+        print(f"Running Fuzzer on {self.target}")
+        for service in self.services:
+            data = self.services[service]
+            if data["name"] == "http":
+                protocol = "http"
+                if hasattr(self,'protocol'):
+                    protocol = self.protocol
+
+                url = f"{protocol}://{self.address}:{service}"
+
+                if service == 80:
+                    url = f"http://{self.address}"
+                elif service == 443:
+                    url = f"https://{self.address}"
+
+                fuzzed_urls += wu.Fuzzer(url,wordlist).run()
 
     def enumerate_subdomains(self):
         """

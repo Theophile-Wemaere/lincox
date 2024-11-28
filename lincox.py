@@ -1,3 +1,5 @@
+#!/bin/env python3
+
 import argparse
 from src import toolbox
 from src import scanner
