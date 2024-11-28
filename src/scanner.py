@@ -9,8 +9,9 @@ COMMON_PORTS = [80,443,8000,8080,8081,8443]
 
 class Target:
 
-    def __init__(self,target: str):
+    def __init__(self,target: str, force_scan: bool):
         self.target = target
+        self.force_scan = force_scan
 
     def initialize(self):
         """
@@ -33,7 +34,10 @@ class Target:
             toolbox.debug(f"{self.address} is up!")
         else:
             toolbox.debug(f"{self.address} is down!")
-            toolbox.exit_error(f"{self.address} is down, use -f to scan anyway",0)
+            if self.force_scan:
+                print(f"{self.address} is down\nContinuing scan as force flag is set")
+            else:
+                toolbox.exit_error(f"{self.address} is down, use -f to scan anyway",0)
 
         print(f"Target is valid, launching discovery on {self.address}")
 
