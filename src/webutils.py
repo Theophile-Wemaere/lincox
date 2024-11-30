@@ -109,10 +109,13 @@ class Fuzzer:
     def __fetch_url(self,line:str)->str:
 
         r = None
-        if self.method == "GET":
-            r = requests.get(f"{self.address}/{line}",headers=self.headers)
-        elif self.method == "POST":
-            r = requests.post(f"{self.address}/{line}",body=self.body,headers=self.address)
+        try:
+            if self.method == "GET":
+                r = requests.get(f"{self.address}/{line}",headers=self.headers)
+            elif self.method == "POST":
+                r = requests.post(f"{self.address}/{line}",body=self.body,headers=self.address)
+        except:
+            return False
         
         return r.status_code,r.url
 
@@ -133,11 +136,13 @@ class Fuzzer:
 
                 for future in as_completed(future_to_line):
                     line = future_to_line[future]
-                    result,url = future.result()
-                    if result not in [403,404]:
-                        toolbox.debug(f"Found path {url}")
-                        # results.append((line, url, result))
-                        results.append(url)
+                    result = future.result()
+                    if result:
+                        if result[0] not in [403,404]:
+                            url = result[1]
+                            toolbox.debug(f"Found path {url}")
+                            # results.append((line, url, result))
+                            results.append(url)
                     bar()
 
         for url in results:
