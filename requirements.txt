@@ -3,3 +3,4 @@ alive_progress
 python-nmap
 requests
 bs4
+termcolor

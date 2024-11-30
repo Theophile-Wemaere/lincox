@@ -1,4 +1,5 @@
 from src import toolbox
+
 import socket
 import re
 import ping3
@@ -65,7 +66,8 @@ def scan_ports(address:str, ports:list)-> list:
             toolbox.debug(f"Port {port} open")
             open_ports.append(port)
         except:
-            toolbox.debug(f"Port {port} not open")
+            pass
+            # toolbox.debug(f"Port {port} not open")
 
     threads = []
 
@@ -104,6 +106,6 @@ def nmap_scan(address: str, ports: str)-> dict:
             open_ports[port] = {}
             open_ports[port]["name"] = data["name"]
             open_ports[port]["product"] = data["product"]
-            print(f"Port {port} is open : {data['name']}/{data['product']}")
+            toolbox.tprint(f"Port {port} is open : {data['name']}/{data['product']}")
 
     return open_ports

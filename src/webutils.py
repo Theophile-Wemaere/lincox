@@ -7,6 +7,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from alive_progress import alive_bar
 import json
+import re
 
 class Crawler:
 
@@ -17,40 +18,58 @@ class Crawler:
         self.all_urls = []
         self.all_urls += self.urls_to_visit
 
-    def download_url(self, url):
+    def __download_url(self, url):
         r = requests.get(url,allow_redirects=True)
         if r.url not in self.all_urls:
             toolbox.debug(f"Found path {r.url}")
             self.all_urls.append(r.url)
         return r.text
 
-    def get_linked_urls(self, url, html):
+    def __get_linked_urls(self, url, html):
+        tags_with_urls = {
+            'a': 'href',
+            'link': 'href',
+            'script': 'src',
+            'img': 'src',
+            'iframe': 'src',
+            'video': 'src',
+            'audio': 'src',
+            'source': 'src',
+            'form': 'action',
+        }
         soup = bs4.BeautifulSoup(html, 'html.parser')
-        links = soup.find_all('a')
-        for link in links:
-            path = link.get('href')
-            if path and path.startswith('/'):
-                path = urljoin(url, path)
-            yield path
+        for tag, attr in tags_with_urls.items():
+            elements = soup.find_all(tag)
+            for element in elements:
+                path = element.get(attr)
+                if path:
+                    # Resolve relative URLs
+                    if path.startswith('/') or path.startswith('http'):
+                        path = urljoin(url, path)
+                    yield path
+        
+        # TODO : crawl JS file for url with fetch(), href, ...
 
-    def add_url_to_visit(self, url):
+    def __add_url_to_visit(self, url):
         if url != None:
             domain = nu.get_domain(url)
             if domain != -1 and not domain.endswith(self.root_domain) and domain != self.root_domain:
                 # if a domain is found and it's not the root domain (e.g. external links like youtube, instagram, ...) or a subdomain
                 return
             if url not in self.visited_urls and url not in self.urls_to_visit and not url.startswith('#'):
-                self.urls_to_visit.append(url)
+                media = r".*\.(jpg|jpeg|png|gif|mp4|mov|avi|mp3|wav|flac)$"
+                if not re.match(media, url, re.IGNORECASE):
+                    self.urls_to_visit.append(url)
 
-    def crawl(self, url):
-        html= self.download_url(url)
-        for url in self.get_linked_urls(url, html):
-            self.add_url_to_visit(url)
+    def __crawl(self, url):
+        html= self.__download_url(url)
+        for url in self.__get_linked_urls(url, html):
+            self.__add_url_to_visit(url)
 
     def run(self):
         while self.urls_to_visit:
             url = self.urls_to_visit.pop(0)
-            self.crawl(url)
+            self.__crawl(url)
             self.visited_urls.append(url)
             try:
                 self.crawl(url)
@@ -75,7 +94,7 @@ class Fuzzer:
         if body is not None:
             self.body = body
 
-    def get_file_lines(self,file_path:str)->list:
+    def __get_file_lines(self,file_path:str)->list:
 
         lines = []
         if not os.path.exists(file_path):
@@ -87,7 +106,7 @@ class Fuzzer:
             
         return lines
 
-    def fetch_url(self,line:str)->str:
+    def __fetch_url(self,line:str)->str:
 
         r = None
         if self.method == "GET":
@@ -99,7 +118,7 @@ class Fuzzer:
 
     def run(self):
 
-        lines = self.get_file_lines(self.wordlist)
+        lines = self.__get_file_lines(self.wordlist)
         num_concurrent = 80
         
         if len(lines) == 0:
@@ -107,10 +126,10 @@ class Fuzzer:
 
         results = []
 
-        with alive_bar(len(lines), title=f"Fuzzing {self.address}", enrich_print=False) as bar:
+        with alive_bar(len(lines), title=toolbox.get_header("INFO")+f"Fuzzing {self.address}", enrich_print=False) as bar:
             with ThreadPoolExecutor(max_workers=num_concurrent) as executor:
                 
-                future_to_line = {executor.submit(self.fetch_url, line): line for line in lines}
+                future_to_line = {executor.submit(self.__fetch_url, line): line for line in lines}
 
                 for future in as_completed(future_to_line):
                     line = future_to_line[future]
@@ -121,7 +140,7 @@ class Fuzzer:
                         results.append(url)
                     bar()
 
-        for result in results:
+        for url in results:
             if url not in self.fuzzed_urls:
                 self.fuzzed_urls.append(url)
 
