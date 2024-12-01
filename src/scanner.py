@@ -37,7 +37,8 @@ class Target:
         else:
             toolbox.debug(f"{self.address} is down!")
             if self.force_scan:
-                toolbox.tprint(f"{self.address} is down\nContinuing scan as force flag is set")
+                toolbox.tprint(f"{self.address} seems to be down")
+                toolbox.tprint("Continuing scan as force flag is set")
             else:
                 toolbox.exit_error(f"{self.address} is down, use -f to scan anyway",0)
 
@@ -180,8 +181,9 @@ class Target:
         must be run after search_service() function
         """
 
+        self.crawled_urls = []
+        self.fuzzed_urls = []
         visited_urls = []
-        fuzzed_urls = []
         wordlist = "data/wordlist.txt"
 
         toolbox.tprint(f"Running Crawler on {self.target}")
@@ -202,9 +204,12 @@ class Target:
                     url = f"https://{self.address}"
 
                 visited_urls += [url]
-                visited_urls += wu.Crawler(urls=visited_urls).run()
+                crawled_urls = wu.Crawler(urls=visited_urls).run()
+                for url,code in crawled_urls:
+                    self.crawled_urls.append((url,code))
+                    visited_urls.append(url)
 
-        toolbox.tprint(f"Found {len(visited_urls)} URL(s) on {self.target} via crawling")
+        toolbox.tprint(f"Found {len(self.crawled_urls)} URL(s) on {self.target} via crawling")
 
         toolbox.tprint(f"Running Fuzzer on {self.target}")
         for service in self.services:
@@ -221,9 +226,14 @@ class Target:
                 elif service == 443:
                     url = f"https://{self.address}"
 
-                fuzzed_urls += wu.Fuzzer(url,wordlist).run()
+                self.fuzzed_urls += wu.Fuzzer(url,wordlist).run()
 
-        toolbox.tprint(f"Found {len(fuzzed_urls)} URL(s) on {self.target} via fuzzing")
+        toolbox.tprint(f"Found {len(self.fuzzed_urls)} URL(s) on {self.target} via fuzzing")
+        self.all_urls = []
+        for url,code in self.crawled_urls:
+            self.all_urls.append((url,code,"Crawler"))
+        for url,code in self.fuzzed_urls:
+            self.all_urls.append((url,code,"Fuzzer"))
 
     def enumerate_subdomains(self):
         """

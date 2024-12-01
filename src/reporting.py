@@ -138,32 +138,97 @@ def html_report(self)->str:
         </table>
       </section>"""
 
-    if hasattr(self,"domains"):
-        html += """
-        <!-- Detected Subdomains Section -->
-        <section class="table-container">
-            <h2 class="h4 mt-4">Detected Subdomains</h2>
-            <table class="table table-bordered table-striped">
-            <thead class="table-dark">
-                <tr>
-                <th>Subdomain</th>
-                <!-- <th>IP Address</th> -->
-                <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>"""
+    if hasattr(self, "domains"):
+      html += f"""
+      <!-- Detected Domains Section -->
+      <section class="table-container">
+          <h2 class="h4 mt-4">Detected Domains</h2>
 
-        for finding,status in self.domains:
-            html += f"""
-                <tr>
-                <td>{finding}</td>
-                <td>{status}</td>
-                </tr>
-            """
-        html += """
-        </tbody>
-        </table>
-    </section>"""
+          <div class="accordion">
+              <div class="accordion-item">
+                  <h2 class="accordion-header">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                          data-bs-target="#collapseDomains" aria-expanded="false" aria-controls="collapseDomains">
+                          View Detected Domains ({len(self.domains)})
+                      </button>
+                  </h2>
+                  <div id="collapseDomains" class="accordion-collapse collapse" aria-labelledby="headingDomains" 
+                      data-bs-parent="#domainsAccordion">
+                      <div class="accordion-body">
+                          <table class="table table-bordered table-striped">
+                              <thead class="table-dark">
+                                  <tr>
+                                      <th>Domains</th>
+                                      <!-- <th>IP Address</th> -->
+                                      <th>Status</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+      """
+
+      for finding, status in self.domains:
+          html += f"""
+                                  <tr>
+                                      <td>{finding}</td>
+                                      <td>{status}</td>
+                                  </tr>
+          """
+
+      html += """
+                              </tbody>
+                          </table>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </section>
+      """
+
+    html += f"""
+    <!-- Detected URLs Section -->
+    <section class="table-container">
+        <h2 class="h4 mt-4">Found URLs</h2>
+
+        <div class="accordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#collapseURLs" aria-expanded="false" aria-controls="collapseURLs">
+                        View Detected URLs ({len(self.all_urls)})
+                    </button>
+                </h2>
+                <div id="collapseURLs" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                    data-bs-parent="#urlsAccordion">
+                    <div class="accordion-body">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>URL</th>
+                                    <th>Response</th>
+                                    <th>Source</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+    """
+
+    for url, code, source in self.all_urls:
+        html += f"""
+                                <tr>
+                                    <td><a href="{url}">{url}</a></td>
+                                    <td>{code}</td>
+                                    <td>{source}</td>
+                                </tr>
+        """
+
+    html += """
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    """
 
     html += """
       <!-- Additional Findings Section -->
