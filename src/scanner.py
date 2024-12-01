@@ -4,6 +4,8 @@ from src import networkutils as nu
 from src import reporting
 import re
 import os
+import time
+from alive_progress import alive_bar
 
 class Target:
 
@@ -14,6 +16,7 @@ class Target:
         self.scope = scope
         self.ports_list = [80,443,8000,8080,8081,8443]
         self.ports_args = ",".join(list(map(str,self.ports_list)))
+        self.override_port = False
 
     def initialize(self):
         """
@@ -147,17 +150,17 @@ class Target:
                 to_scan = [self.port]
                 self.ports_args = str(self.port)
             elif hasattr(self,'protocol'):
-                if self.protocol == "http":
+                if self.protocol.find("http") != -1:
                     to_scan = [80]
                     self.ports_args = "80"
-                elif self.protocol == "https":
+                elif self.protocol.find("https") != -1:
                     to_scan = [443]
                     self.ports_args = "443"
             else:
                 to_scan = [80,443]
                 self.ports_args = "80,443"
 
-        elif self.scope == "full":
+        elif self.scope == "full" and not self.override_port:
             to_scan = self.set_ports_list("all")
 
         self.ports = nu.PortScanner(self.address).run(to_scan)
@@ -166,11 +169,11 @@ class Target:
             toolbox.exit_error(f"No open ports found on {self.address}, use -p to specify port(s) to scan",0)
 
         toolbox.tprint(f"Open ports found on {self.address} : {",".join([str(port) for port in self.ports])}")
-        toolbox.tprint("Enumerating services...")
+        toolbox.tprint("Enumerating services with nmap (can take a few minutes)...")
         self.services = nu.nmap_scan(self.address,",".join([str(port) for port in self.ports]))
         f = False
         for service in self.services:
-            if self.services[service]["name"] == "http":
+            if self.services[service]["name"].find("http") != -1:
                 f = True
         if not f:
             toolbox.exit_error(f"No WEB services found on {self.address}, exiting",0)
@@ -186,25 +189,29 @@ class Target:
         visited_urls = []
         wordlist = "data/wordlist.txt"
 
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+        time.sleep(5)
+
         toolbox.tprint(f"Running Crawler on {self.target}")
         for service in self.services:
             # print("trying",self.services[service])
             data = self.services[service]
-            if data["name"] == "http":
+            if data["name"].find("http") != -1:
                 protocol = "http"
                 if hasattr(self,'protocol'):
                     protocol = self.protocol
 
                 url = f"{protocol}://{self.address}:{service}"
 
-                if str(service).find("80") != -1:
+                if service == 80:
                     url = f"http://{self.address}"
 
-                if str(service).find("443") != -1:
+                if service == 443 or data["name"].find("https") != -1:
                     url = f"https://{self.address}"
 
-                visited_urls += [url]
-                crawled_urls = wu.Crawler(urls=visited_urls).run()
+
+                toolbox.tprint(f"Crawling from {url}")
+                crawled_urls = wu.Crawler(url=[url],visited_urls=visited_urls).run()
                 for url,code in crawled_urls:
                     self.crawled_urls.append((url,code))
                     visited_urls.append(url)
@@ -248,15 +255,19 @@ class Target:
             if len(domains) == 0:
                 toolbox.tprint(f"No domains found with crt.sh for {self.address}")
                 return
+            else:
+                toolbox.tprint(f"Found {len(domains)} domains with crt.sh")
             self.domains = []
             alives = 0
-            for domain in domains:
-                alive = nu.ping_target(domain)
-                if alive:
-                    self.domains.append((domain,"alive"))
-                    alives += 1
-                else:
-                    self.domains.append((domain,"down"))
+            with alive_bar(len(domains),title=toolbox.get_header("INFO")+f"Checking domains status", enrich_print=False) as bar:
+                for domain in domains:
+                    alive = nu.ping_target(domain)
+                    if alive:
+                        self.domains.append((domain,"alive"))
+                        alives += 1
+                    else:
+                        self.domains.append((domain,"down"))
+                    bar()
 
             toolbox.tprint(f"Found {len(domains)} domains with {alives} alives, saving to {self.address}_subdomains.txt")
             # with open(f"{self.address}_subdomains.txt","w") as file:

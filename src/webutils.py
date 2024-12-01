@@ -9,21 +9,31 @@ from alive_progress import alive_bar
 import json
 import re
 
+import warnings
+warnings.filterwarnings('ignore', category=bs4.XMLParsedAsHTMLWarning)
+
 class Crawler:
 
-    def __init__(self, urls=[]):
-        self.visited_urls = []
-        self.urls_to_visit = urls
-        self.root_domain = nu.get_domain(urls[0])
+    def __init__(self, url=[],visited_urls=[]):
+        self.visited_urls = visited_urls
+        self.urls_to_visit = url
+        self.root_domain = nu.get_domain(url[0])
         self.all_urls = []
-        self.all_urls += []
 
     def __download_url(self, url):
-        r = requests.get(url,allow_redirects=True)
-        if r.url not in self.all_urls:
-            toolbox.debug(f"Found path {r.url}")
-            self.all_urls.append((r.url,r.status_code))
-        return r.text
+        try:
+            r = requests.get(url,allow_redirects=True)
+            if r.url not in self.all_urls:
+                toolbox.debug(f"Found path {r.url}")
+                self.all_urls.append((r.url,r.status_code))
+                self.visited_urls.append(url)
+            return r.text
+        except KeyboardInterrupt:
+            exit()
+        except Exception as e:
+            print(url)
+            print(e)
+            return False
 
     def __get_linked_urls(self, url, html):
         tags_with_urls = {
@@ -44,11 +54,25 @@ class Crawler:
                 path = element.get(attr)
                 if path:
                     # Resolve relative URLs
-                    if path.startswith('/') or path.startswith('http'):
-                        path = urljoin(url, path)
+                    # if path.startswith('/') or path.startswith('http'):
+                    if path.startswith("mailto"):
+                        return
+                    path = urljoin(url, path)
                     yield path
         
         # TODO : crawl JS file for url with fetch(), href, ...
+
+    def __extract_url(self,url):
+        """
+        remove comment from url
+        """
+
+        if url.find('#') != -1:
+            ind = url.find('#')
+            url = url [:ind]
+            return url + "#LINCOX" # marker for vuln research
+        
+        return url
 
     def __add_url_to_visit(self, url):
         if url != None:
@@ -56,18 +80,24 @@ class Crawler:
             if domain != -1 and not domain.endswith(self.root_domain) and domain != self.root_domain:
                 # if a domain is found and it's not the root domain (e.g. external links like youtube, instagram, ...) or a subdomain
                 return
+            
+            url = self.__extract_url(url)
+
             if url not in self.visited_urls and url not in self.urls_to_visit and not url.startswith('#'):
-                media = r".*\.(jpg|jpeg|png|gif|mp4|mov|avi|mp3|wav|flac)$"
+                # hide media, js and css files
+                media = r".*\.(jpg|jpeg|png|gif|mp4|mov|avi|mp3|wav|flac|svg|js|css).*"
                 if not re.match(media, url, re.IGNORECASE):
                     self.urls_to_visit.append(url)
 
     def __crawl(self, url):
         html= self.__download_url(url)
-        for url in self.__get_linked_urls(url, html):
-            self.__add_url_to_visit(url)
+        if html:
+            for url in self.__get_linked_urls(url, html):
+                self.__add_url_to_visit(url)
 
     def run(self):
         while self.urls_to_visit:
+            toolbox.tprint(f"Found {len(self.visited_urls)} urls, got {len(self.urls_to_visit)} to visit",end='\r')
             url = self.urls_to_visit.pop(0)
             self.__crawl(url)
             self.visited_urls.append(url)
@@ -169,5 +199,5 @@ def get_crt_domains(address: str)-> list:
             domains.append(entry["name_value"])
     domains = list(set(domains))
     for domain in domains:
-        toolbox.debug(domain)
+        toolbox.debug("Found domain " + domain)
     return domains

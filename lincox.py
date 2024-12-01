@@ -76,6 +76,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
         if args.ports:
             if args.ports != "ports":
                 target.set_ports_list(args.ports)
+                target.override_port = True
 
         if not args.load:
             target.initialize()
@@ -91,7 +92,6 @@ Default : 80,443,8000,8080,8081,8443\n """)
                 target = pickle.load(file)
 
         # TODO : optional add other services enumeration, CPE fetching and CVE fetching with online API
-        
         target.enumerate_web_services()
 
         # with open("target.pkl",'wb') as file:
