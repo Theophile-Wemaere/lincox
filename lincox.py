@@ -92,7 +92,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
         # TODO : optional add other services enumeration, CPE fetching and CVE fetching with online API
         
-        # target.enumerate_web_services()
+        target.enumerate_web_services()
 
         # with open("target.pkl",'wb') as file:
         #     pickle.dump(target,file)

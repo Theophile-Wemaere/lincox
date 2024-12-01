@@ -16,13 +16,13 @@ class Crawler:
         self.urls_to_visit = urls
         self.root_domain = nu.get_domain(urls[0])
         self.all_urls = []
-        self.all_urls += self.urls_to_visit
+        self.all_urls += []
 
     def __download_url(self, url):
         r = requests.get(url,allow_redirects=True)
         if r.url not in self.all_urls:
             toolbox.debug(f"Found path {r.url}")
-            self.all_urls.append(r.url)
+            self.all_urls.append((r.url,r.status_code))
         return r.text
 
     def __get_linked_urls(self, url, html):
@@ -117,7 +117,7 @@ class Fuzzer:
         except:
             return False
         
-        return r.status_code,r.url
+        return r.url,r.status_code
 
     def run(self):
 
@@ -138,11 +138,12 @@ class Fuzzer:
                     line = future_to_line[future]
                     result = future.result()
                     if result:
-                        if result[0] not in [403,404]:
-                            url = result[1]
+                        url,code = result
+                        if code not in [403,404]:
+                            url,code = result
                             toolbox.debug(f"Found path {url}")
                             # results.append((line, url, result))
-                            results.append(url)
+                            results.append((url,code))
                     bar()
 
         for url in results:
