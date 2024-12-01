@@ -1,16 +1,19 @@
 from src import toolbox
 from src import webutils as wu
 from src import networkutils as nu
+from src import reporting
 import re
 import os
 
 class Target:
 
-    def __init__(self,target: str, force_scan: bool, scope: str):
+    def __init__(self,target: str, attack_mode:bool, force_scan: bool, scope: str):
         self.target = target
+        self.attack_mode = attack_mode
         self.force_scan = force_scan
         self.scope = scope
         self.ports_list = [80,443,8000,8080,8081,8443]
+        self.ports_args = ",".join(list(map(str,self.ports_list)))
 
     def initialize(self):
         """
@@ -49,6 +52,8 @@ class Target:
         - 1,2,3,4
         - -/all
         """
+
+        self.ports_args = ports
 
         ports_list = []
         if ports == '-' or ports == 'all':
@@ -139,17 +144,22 @@ class Target:
         if self.scope == "strict":
             if hasattr(self,'port'):
                 to_scan = [self.port]
+                self.ports_args = str(self.port)
             elif hasattr(self,'protocol'):
                 if self.protocol == "http":
                     to_scan = [80]
+                    self.ports_args = "80"
                 elif self.protocol == "https":
                     to_scan = [443]
+                    self.ports_args = "443"
             else:
                 to_scan = [80,443]
+                self.ports_args = "80,443"
+
         elif self.scope == "full":
             to_scan = self.set_ports_list("all")
 
-        self.ports = nu.scan_ports(self.address,to_scan)
+        self.ports = nu.PortScanner(self.address).run(to_scan)
         
         if len(self.ports) == 0:
             toolbox.exit_error(f"No open ports found on {self.address}, use -p to specify port(s) to scan",0)
@@ -176,6 +186,7 @@ class Target:
 
         toolbox.tprint(f"Running Crawler on {self.target}")
         for service in self.services:
+            # print("trying",self.services[service])
             data = self.services[service]
             if data["name"] == "http":
                 protocol = "http"
@@ -227,20 +238,27 @@ class Target:
             if len(domains) == 0:
                 toolbox.tprint(f"No domains found with crt.sh for {self.address}")
                 return
-            alives = []
-            downs = []
+            self.domains = []
+            alives = 0
             for domain in domains:
                 alive = nu.ping_target(domain)
                 if alive:
-                    alives.append(domain)
+                    self.domains.append((domain,"alive"))
+                    alives += 1
                 else:
-                    downs.append(domain)
-            self.domains = {
-                "alives": alives,
-                "downs": downs
-            }
+                    self.domains.append((domain,"down"))
 
-            # toolbox.tprint(f"Found {len(alives)} domains alive, saving to {self.address}_subdomains.txt")
+            toolbox.tprint(f"Found {len(domains)} domains with {alives} alives, saving to {self.address}_subdomains.txt")
             # with open(f"{self.address}_subdomains.txt","w") as file:
             #     for domain in alives:
             #         file.write(domain+"\n")
+
+    def create_report(self):
+        """
+        create a report of the scan results
+        """
+
+        html = reporting.html_report(self)
+
+        with open("index.html","w") as report:
+            report.write(html)
