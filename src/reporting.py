@@ -169,7 +169,7 @@ def html_report(self)->str:
       for finding, status in self.domains:
           html += f"""
                                   <tr>
-                                      <td>{finding}</td>
+                                      <td><a href="http://{finding}">{finding}</a></td>
                                       <td>{status}</td>
                                   </tr>
           """

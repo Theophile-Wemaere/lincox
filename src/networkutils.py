@@ -35,7 +35,7 @@ def ping_target(address: str)-> bool:
     if address == None:
         toolbox.exit_error("Error, trying to ping but no address specified",1)
     
-    response = ping3.ping(address)
+    response = ping3.ping(address,timeout=2)
     if response:
         return True
     return False
