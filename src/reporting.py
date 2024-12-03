@@ -15,7 +15,7 @@ def get_scope_info(scope:str)->tuple:
     """
 
     if scope == "full":
-        return "Full","only scan the given target, (no ports and subdomains enumeration)"
+        return "Full","scan for subdomains and try to find services on all port"
     elif scope == "medium":
         return "Medium","scan target for differents services on most used ports"
     elif scope == "strict":
@@ -26,7 +26,7 @@ def html_report(self)->str:
     initialize a HTML report with the target address
     """
 
-    # header section
+    #region header section
     html = """
 <!DOCTYPE html>
 <html lang="en">
@@ -70,27 +70,37 @@ def html_report(self)->str:
       <section>
         <h2 class="h4">Scan settings</h2>
         <ul class="list-group">"""
+    
+    #endregion
 
-    # scan settings (mode,scope,ports)
+    #region scan settings (mode,scope,ports)
     scan_mode,scan_details = get_scan_info(self.attack_mode)
     scope, scope_details = get_scope_info(self.scope)
     ports = self.ports_args if self.ports_args not in ['-','all'] else 'all ports from 1 to 65535'
     html += f"""
           <li class="list-group-item">
-            Scan mode: <strong>{scan_mode}</strong>, {scan_details}
+            <strong>Start Time :</strong> Launched at {self.start.split(' ')[1]} on {self.start.split(' ')[0]}
           </li>
           <li class="list-group-item">
-            Scope : <strong>{scope}</strong>, {scope_details}
+            <strong>End Time :</strong> Finished at {self.end.split(' ')[1]} on {self.end.split(' ')[0]}
           </li>
           <li class="list-group-item">
-            Ports scanned : {ports}
+            <strong>Scan mode :</strong> {scan_mode}, {scan_details}
+          </li>
+          <li class="list-group-item">
+            <strong>Scope :</strong> {scope}, {scope_details}
+          </li>
+          <li class="list-group-item">
+            <strong>Ports scanned :</strong> {ports}
           </li>"""
     
     html += """
         </ul>
       </section>"""
     
-    # services detected
+    #endregion
+
+    #region services detected
     html += """
       <br>
       <!-- Detected Services Section -->
@@ -138,6 +148,10 @@ def html_report(self)->str:
         </table>
       </section>"""
 
+    #endregion
+
+    #region domains
+    
     if hasattr(self, "domains"):
       html += f"""
       <!-- Detected Domains Section -->
@@ -183,21 +197,23 @@ def html_report(self)->str:
           </div>
       </section>
       """
-
+    #endregion
+    
+    #region Crawled URLs
     html += f"""
     <!-- Detected URLs Section -->
     <section class="table-container">
-        <h2 class="h4 mt-4">Found URLs</h2>
+        <h2 class="h4 mt-4">Found URLs (Crawler)</h2>
 
         <div class="accordion">
             <div class="accordion-item">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                        data-bs-target="#collapseURLs" aria-expanded="false" aria-controls="collapseURLs">
-                        View Detected URLs ({len(self.all_urls)})
+                        data-bs-target="#collapseCrawledURLs" aria-expanded="false" aria-controls="collapseCrawledURLs">
+                        View Detected URLs ({len(self.crawled_urls)})
                     </button>
                 </h2>
-                <div id="collapseURLs" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                <div id="collapseCrawledURLs" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
                     data-bs-parent="#urlsAccordion">
                     <div class="accordion-body">
                         <table class="table table-bordered table-striped">
@@ -205,18 +221,16 @@ def html_report(self)->str:
                                 <tr>
                                     <th>URL</th>
                                     <th>Response</th>
-                                    <th>Source</th>
                                 </tr>
                             </thead>
                             <tbody>
     """
 
-    for url, code, source in self.all_urls:
+    for url, code in self.crawled_urls:
         html += f"""
                                 <tr>
                                     <td><a href="{url}">{url}</a></td>
                                     <td>{code}</td>
-                                    <td>{source}</td>
                                 </tr>
         """
 
@@ -229,6 +243,53 @@ def html_report(self)->str:
         </div>
     </section>
     """
+    #endregion
+
+    #region Fuzzed URLs
+    html += f"""
+    <!-- Detected URLs Section -->
+    <section class="table-container">
+        <h2 class="h4 mt-4">Found URLs (Fuzzer)</h2>
+
+        <div class="accordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#collapseFuzzedURLs" aria-expanded="false" aria-controls="collapseFuzzedURLs">
+                        View Detected URLs ({len(self.fuzzed_urls)})
+                    </button>
+                </h2>
+                <div id="collapseFuzzedURLs" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                    data-bs-parent="#urlsAccordion">
+                    <div class="accordion-body">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>URL</th>
+                                    <th>Response</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+    """
+
+    for url, code in self.fuzzed_urls:
+        html += f"""
+                                <tr>
+                                    <td><a href="{url}">{url}</a></td>
+                                    <td>{code}</td>
+                                </tr>
+        """
+
+    html += """
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    """
+    #endregion
 
     html += """
       <!-- Additional Findings Section -->

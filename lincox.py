@@ -112,7 +112,6 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("Ctrl+C pressed, exiting...")
-        exit(1)
+        toolbox.exit_error("Ctrl+C pressed, exiting...",1)
     finally:
         print()

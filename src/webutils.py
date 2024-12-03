@@ -19,6 +19,7 @@ class Crawler:
         self.urls_to_visit = url
         self.root_domain = nu.get_domain(url[0])
         self.all_urls = []
+        self.STOP = False
 
     def __download_url(self, url):
         try:
@@ -29,7 +30,8 @@ class Crawler:
                 self.visited_urls.append(url)
             return r.text
         except KeyboardInterrupt:
-            exit()
+            toolbox.warn("Keyboard interrupt detected, skipping Crawler",start='\n')
+            self.STOP = True
         except Exception as e:
             print(url)
             print(e)
@@ -97,12 +99,14 @@ class Crawler:
 
     def run(self):
         while self.urls_to_visit:
+
+            if self.STOP:
+                return self.all_urls
+
             toolbox.tprint(f"Found {len(self.visited_urls)} urls, got {len(self.urls_to_visit)} to visit",end='\r')
             url = self.urls_to_visit.pop(0)
-            self.__crawl(url)
-            self.visited_urls.append(url)
             try:
-                self.crawl(url)
+                self.__crawl(url)
             except:
                 pass
             finally:
@@ -171,6 +175,9 @@ class Fuzzer:
                         url,code = result
                         if code not in [403,404]:
                             url,code = result
+                            if url.find('//') != -1:
+                                url = url.replace('//','/')
+
                             toolbox.debug(f"Found path {url}")
                             # results.append((line, url, result))
                             results.append((url,code))
