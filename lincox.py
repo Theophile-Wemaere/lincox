@@ -103,7 +103,11 @@ Default : 80,443,8000,8080,8081,8443\n """)
         with open("target.pkl",'wb') as file:
             pickle.dump(target,file)
 
-        target.search_parameters()
+        # target.search_parameters()
+
+        with open("target.pkl",'wb') as file:
+            pickle.dump(target,file)
+
         if not ATTACK_MODE:
             target.create_report()
             exit(0)

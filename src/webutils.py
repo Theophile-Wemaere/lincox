@@ -23,6 +23,7 @@ class Crawler:
     def __init__(self, url=[],visited_urls=[]):
         self.visited_urls = visited_urls
         self.urls_to_visit = url
+        self.address = url[0]
         self.root_domain = nu.get_domain(url[0])
         self.all_urls = []
         self.STOP = False
@@ -36,7 +37,7 @@ class Crawler:
                 self.visited_urls.append(url)
             return r.text
         except KeyboardInterrupt:
-            toolbox.warn("Keyboard interrupt detected, skipping Crawler",start='\n')
+            toolbox.warn(f"Keyboard interrupt detected, skipping Crawler on {self.address}",start='\n')
             self.STOP = True
         except Exception as e:
             print(url)
@@ -151,7 +152,7 @@ class Fuzzer:
         if self.method == "GET":
             r = requests.get(f"{self.address}/{line}",headers=HEADERS,verify=False)
         elif self.method == "POST":
-            r = requests.post(f"{self.address}/{line}",body=self.body,headers=HEADERS,verify=False)
+            r = requests.post(f"{self.address}/{line}",data=self.body,headers=HEADERS,verify=False)
         return r.url,r.status_code,len(r.text)
 
     def run(self):
@@ -179,11 +180,10 @@ class Fuzzer:
                             if code not in [403,404] and size != previous_size:
                                 previous_size = size
                                 toolbox.debug(f"Found path {url}")
-                                # results.append((line, url, result))
                                 results.append((url,code))
                         bar()
         except KeyboardInterrupt:
-            toolbox.warn("Keyboard interrupt detected, skipping Fuzzer",start='\n')
+            toolbox.warn(f"Keyboard interrupt detected, skipping Fuzzer on {self.address}",start='\n')
             self.STOP = True
             return []
         except Exception as e:
@@ -195,6 +195,90 @@ class Fuzzer:
                 self.fuzzed_urls.append(url)
 
         return self.fuzzed_urls
+
+class ParaMiner:
+
+    def __init__(self,url,wordlist):
+        self.url = url
+        self.wordlist = wordlist
+        self.STOP = False
+
+    def __get_file_lines(self,file_path:str)->list:
+
+        lines = []
+        if not os.path.exists(file_path):
+            toolbox.exit_error(f"Error, {file_path} doesn't exists",1)
+        
+        with open(file_path,"r") as file:
+            for line in file:
+                lines.append(line.replace('\n',''))
+            
+        return lines
+
+    def __fetch_url(self,line:str)->str:
+
+        value = "/etc/passwd"
+
+        r = requests.get(f"{self.url}?{line}={value}",headers=HEADERS,verify=False)
+        if len(r.text) != self.default_size:
+            return r.url,line,r.status_code,len(r.text),"GET"
+        
+        # else try POST request
+        body = {
+            f"{line}":f"{value}"
+        }
+        r = requests.post(f"{self.url}",data=body,headers=HEADERS,verify=False)
+        if len(r.text) != self.default_size:
+            return r.url,line,r.status_code,len(r.text),"POST"
+        return False
+
+        return False 
+
+    def run(self):
+
+        lines = self.__get_file_lines(self.wordlist)
+        num_concurrent = 80
+        
+        if len(lines) == 0:
+            toolbox.exit_error(f"Error, {file_path} seems to be empty",1)
+
+        results = []
+        self.default_size = len(requests.get(f"{self.url}",headers=HEADERS,verify=False).text)
+
+        # get default code for unknown parameter
+        self.default_code_get = requests.get(f"{self.url}/?LINCOX=lugi",headers=HEADERS,verify=False).status_code
+        self.default_code_post = requests.post(f"{self.url}",data={"LINCOX":"albert-fish"},headers=HEADERS,verify=False).status_code
+
+        self.bad_codes = [403,404,405]
+        if self.default_code_get != 200:
+            self.bad_codes.append(self.default_code_get)
+        if self.default_code_post != 200:
+            self.bad_codes.append(self.default_code_post)
+
+        try:
+            with alive_bar(len(lines), title=toolbox.get_header("INFO")+f"Searching parameter in {self.url}", enrich_print=False) as bar:
+                with ThreadPoolExecutor(max_workers=num_concurrent) as executor:
+                    
+                    future_to_line = {executor.submit(self.__fetch_url, line): line for line in lines}
+
+                    for future in as_completed(future_to_line):
+                        line = future_to_line[future]
+                        result = future.result()
+                        if result:
+                            url,parameter,code,size,method = result
+                            if code not in self.bad_codes and size != self.default_size:
+                                toolbox.debug(f"Found parameter {parameter} with {method} request")
+                                results.append(result)
+                        bar()
+        except KeyboardInterrupt:
+            toolbox.warn(f"Keyboard interrupt detected, skipping Fuzzer on {self.url}",start='\n')
+            self.STOP = True
+            return []
+        except Exception as e:
+            print(e)
+            return []
+
+        return results
 
 def get_crt_domains(address: str)-> list:
     """
