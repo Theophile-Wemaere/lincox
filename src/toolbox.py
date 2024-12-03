@@ -1,6 +1,5 @@
 from termcolor import colored
 from datetime import datetime
-
 import lincox as main
 
 DEBUG = False
@@ -32,7 +31,7 @@ def exit_error(msg,code):
     print error message and exit
     """
 
-    print(msg)
+    print(get_header("ERROR")+msg)
     exit(code)
 
 def get_header(type:str)->str:
@@ -48,6 +47,12 @@ def get_header(type:str)->str:
     if type == "INFO":
         return timestamp_header + ' ' + '['+colored("INFO","green")+'] '
 
+    if type == "WARNING":
+        return timestamp_header + ' ' + '['+colored("WARNING","black","on_light_yellow")+'] '
+
+    if type == "ERROR":
+        return timestamp_header + ' ' + '['+colored("WARNING","yellow","on_red")+'] '
+
 
 def debug(msg):
     """
@@ -59,11 +64,20 @@ def debug(msg):
 
     print(get_header("DEBUG")+msg)
 
-def tprint(*args,end='\n'):
+def tprint(*args,start='',end='\n'):
     """
     toolbox print with timestamp and colors
     """
+    print(start,end='')
     print(get_header("INFO")+" ".join(map(str, args)),end='')
+    print(end,end='')
+
+def warn(*args,start='',end='\n'):
+    """
+    toolbox print with timestamp and colors
+    """
+    print(start,end='')
+    print(get_header("WARNING")+" ".join(map(str, args)),end='')
     print(end,end='')
 
 def isint(v):

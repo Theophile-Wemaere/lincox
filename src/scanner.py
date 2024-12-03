@@ -5,11 +5,13 @@ from src import reporting
 import re
 import os
 import time
+from datetime import datetime
 from alive_progress import alive_bar
 
 class Target:
 
     def __init__(self,target: str, attack_mode:bool, force_scan: bool, scope: str):
+        self.start = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.target = target
         self.attack_mode = attack_mode
         self.force_scan = force_scan
@@ -189,8 +191,8 @@ class Target:
         visited_urls = []
         wordlist = "data/wordlist.txt"
 
-        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
-        time.sleep(5)
+        # toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+        # time.sleep(5)
 
         toolbox.tprint(f"Running Crawler on {self.target}")
         for service in self.services:
@@ -236,11 +238,11 @@ class Target:
                 self.fuzzed_urls += wu.Fuzzer(url,wordlist).run()
 
         toolbox.tprint(f"Found {len(self.fuzzed_urls)} URL(s) on {self.target} via fuzzing")
-        self.all_urls = []
-        for url,code in self.crawled_urls:
-            self.all_urls.append((url,code,"Crawler"))
-        for url,code in self.fuzzed_urls:
-            self.all_urls.append((url,code,"Fuzzer"))
+        # self.all_urls = []
+        # for url,code in self.crawled_urls:
+        #     self.all_urls.append((url,code,"Crawler"))
+        # for url,code in self.fuzzed_urls:
+        #     self.all_urls.append((url,code,"Fuzzer"))
 
     def enumerate_subdomains(self):
         """
@@ -278,6 +280,8 @@ class Target:
         """
         create a report of the scan results
         """
+
+        self.end = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
         html = reporting.html_report(self)
 
