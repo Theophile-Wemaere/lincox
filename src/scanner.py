@@ -298,8 +298,32 @@ class Target:
 
     def search_parameters(self):
         """
-        try to bruteforce for common POST and GET parameters
+        try to bruteforce for common POST and GET parameters on web root
         """
+
+        wordlist = "data/burp-parameter-names.txt"
+
+        self.found_parameters = []
+
+        for service in self.services:
+            data = self.services[service]
+            if data["name"].find("http") != -1:
+                protocol = "http"
+                if hasattr(self,'protocol'):
+                    protocol = self.protocol
+
+                url = f"{protocol}://{self.address}:{service}"
+
+                if service == 80:
+                    url = f"http://{self.address}"
+                elif service == 443:
+                    url = f"https://{self.address}"
+
+                results = wu.ParaMiner(url,wordlist).run()
+                for result in results:
+                    if result not in self.found_parameters:
+                        self.found_parameters.append(result)
+
 
     def create_report(self):
         """
