@@ -191,8 +191,8 @@ class Target:
         visited_urls = []
         wordlist = "data/wordlist.txt"
 
-        # toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
-        # time.sleep(5)
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+        time.sleep(5)
 
         toolbox.tprint(f"Running Crawler on {self.target}")
         for service in self.services:
@@ -280,8 +280,26 @@ class Target:
         """
         enumerate found urls with crawler and fuzzer to search for special headers and technology markers
         """
+        
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+        time.sleep(5)
 
-        wu.search_technology(self.all_urls)
+        headers, found_data = wu.search_technology(self.all_urls)
+        self.found_headers = {}
+        self.found_data = []
+        for header,value in headers:
+            if header not in self.found_headers:
+                self.found_headers[header] = []
+            self.found_headers[header].append(value)
+        
+        for data in found_data:
+            if data not in self.found_data:
+                self.found_data.append(data)
+
+    def search_parameters(self):
+        """
+        try to bruteforce for common POST and GET parameters
+        """
 
     def create_report(self):
         """

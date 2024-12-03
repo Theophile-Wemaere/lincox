@@ -93,15 +93,17 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
         # TODO : optional add other services enumeration, CPE fetching and CVE fetching with online API
 
-        if not args.load:
-            target.enumerate_web_services()
+        # target.enumerate_web_services()
 
-            with open("target.pkl",'wb') as file:
-                pickle.dump(target,file)
+        with open("target.pkl",'wb') as file:
+            pickle.dump(target,file)
 
-        target.search_technology()
-        # target.search_parameters()
+        # target.search_technology()
 
+        with open("target.pkl",'wb') as file:
+            pickle.dump(target,file)
+
+        target.search_parameters()
         if not ATTACK_MODE:
             target.create_report()
             exit(0)
