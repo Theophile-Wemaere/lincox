@@ -223,7 +223,7 @@ class Target:
         toolbox.tprint(f"Running Fuzzer on {self.target}")
         for service in self.services:
             data = self.services[service]
-            if data["name"] == "http":
+            if data["name"].find("http") != -1:
                 protocol = "http"
                 if hasattr(self,'protocol'):
                     protocol = self.protocol
@@ -234,15 +234,15 @@ class Target:
                     url = f"http://{self.address}"
                 elif service == 443:
                     url = f"https://{self.address}"
-
+                
                 self.fuzzed_urls += wu.Fuzzer(url,wordlist).run()
 
         toolbox.tprint(f"Found {len(self.fuzzed_urls)} URL(s) on {self.target} via fuzzing")
-        # self.all_urls = []
-        # for url,code in self.crawled_urls:
-        #     self.all_urls.append((url,code,"Crawler"))
-        # for url,code in self.fuzzed_urls:
-        #     self.all_urls.append((url,code,"Fuzzer"))
+        self.all_urls = []
+        for url,code in self.crawled_urls:
+            self.all_urls.append((url,code,"Crawler"))
+        for url,code in self.fuzzed_urls:
+            self.all_urls.append((url,code,"Fuzzer"))
 
     def enumerate_subdomains(self):
         """
@@ -275,6 +275,13 @@ class Target:
             # with open(f"{self.address}_subdomains.txt","w") as file:
             #     for domain in alives:
             #         file.write(domain+"\n")
+
+    def search_technology(self):
+        """
+        enumerate found urls with crawler and fuzzer to search for special headers and technology markers
+        """
+
+        wu.search_technology(self.all_urls)
 
     def create_report(self):
         """
