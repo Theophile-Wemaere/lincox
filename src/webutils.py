@@ -10,7 +10,13 @@ import json
 import re
 
 import warnings
+from urllib3.exceptions import InsecureRequestWarning
 warnings.filterwarnings('ignore', category=bs4.XMLParsedAsHTMLWarning)
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+
+HEADERS = {
+    "User-Agent":"lincox 1.0"
+}
 
 class Crawler:
 
@@ -23,7 +29,7 @@ class Crawler:
 
     def __download_url(self, url):
         try:
-            r = requests.get(url,allow_redirects=True)
+            r = requests.get(url,allow_redirects=True,headers=HEADERS,verify=False)
             if r.url not in self.all_urls:
                 toolbox.debug(f"Found path {r.url}")
                 self.all_urls.append((r.url,r.status_code))
@@ -116,17 +122,16 @@ class Crawler:
 
 class Fuzzer:
 
-    def __init__(self,address,wordlist,headers=None,method='GET',body=None,fuzzed_urls=[]):
+    def __init__(self,address,wordlist,method='GET',body=None,fuzzed_urls=[]):
         self.address = address
         self.wordlist = wordlist
         self.method = method
         self.fuzzed_urls = fuzzed_urls
         self.headers = None
         self.body = None
-        if headers is not None:
-            self.headers = headers
         if body is not None:
             self.body = body
+        self.STOP = False
 
     def __get_file_lines(self,file_path:str)->list:
 
@@ -143,14 +148,11 @@ class Fuzzer:
     def __fetch_url(self,line:str)->str:
 
         r = None
-        try:
-            if self.method == "GET":
-                r = requests.get(f"{self.address}/{line}",headers=self.headers)
-            elif self.method == "POST":
-                r = requests.post(f"{self.address}/{line}",body=self.body,headers=self.address)
-        except:
-            return False
-        return r.url,r.status_code
+        if self.method == "GET":
+            r = requests.get(f"{self.address}/{line}",headers=HEADERS,verify=False)
+        elif self.method == "POST":
+            r = requests.post(f"{self.address}/{line}",body=self.body,headers=HEADERS,verify=False)
+        return r.url,r.status_code,len(r.text)
 
     def run(self):
 
@@ -161,23 +163,32 @@ class Fuzzer:
             toolbox.exit_error(f"Error, {file_path} seems to be empty",1)
 
         results = []
+        previous_size = 0
 
-        with alive_bar(len(lines), title=toolbox.get_header("INFO")+f"Fuzzing {self.address}", enrich_print=False) as bar:
-            with ThreadPoolExecutor(max_workers=num_concurrent) as executor:
-                
-                future_to_line = {executor.submit(self.__fetch_url, line): line for line in lines}
+        try:
+            with alive_bar(len(lines), title=toolbox.get_header("INFO")+f"Fuzzing {self.address}", enrich_print=False) as bar:
+                with ThreadPoolExecutor(max_workers=num_concurrent) as executor:
+                    
+                    future_to_line = {executor.submit(self.__fetch_url, line): line for line in lines}
 
-                for future in as_completed(future_to_line):
-                    line = future_to_line[future]
-                    result = future.result()
-                    if result:
-                        url,code = result
-                        if code not in [403,404]:
-                            url,code = result
-                            toolbox.debug(f"Found path {url}")
-                            # results.append((line, url, result))
-                            results.append((url,code))
-                    bar()
+                    for future in as_completed(future_to_line):
+                        line = future_to_line[future]
+                        result = future.result()
+                        if result:
+                            url,code,size = result
+                            if code not in [403,404] and size != previous_size:
+                                previous_size = size
+                                toolbox.debug(f"Found path {url}")
+                                # results.append((line, url, result))
+                                results.append((url,code))
+                        bar()
+        except KeyboardInterrupt:
+            toolbox.warn("Keyboard interrupt detected, skipping Fuzzer",start='\n')
+            self.STOP = True
+            return []
+        except Exception as e:
+            print(e)
+            return []
 
         for url in results:
             if url not in self.fuzzed_urls:
@@ -220,14 +231,154 @@ def is_header_interesting(header:str)->bool:
     else:
         return False
 
-def search_page_for_technology(page:str)->dict:
+def search_page_for_technology(page:str)->list:
     """
     search a webpage for well known technology markers
     """
+
+    def search_wordpress(line):
+        markers = [
+            "WordPress",
+            "/wp-content",
+            "/wp-admin",
+            "/themes",
+            "/plugins"
+        ]
+
+        for marker in markers:
+            if line.lower().find(marker.lower()) != -1:
+                return True
+        return False
     
+    def search_drupal(line):
+        markers = [
+            "Drupal"
+        ]
+
+        for marker in markers:
+            if line.lower().find(marker.lower()) != -1:
+                return True
+        return False
+
+    def search_joomla(line):
+        markers = [
+            "Joomla"
+        ]
+
+        for marker in markers:
+            if line.lower().find(marker.lower()) != -1:
+                return True
+        return False
+    
+    def search_password(line):
+
+        line = line.lower().strip()
+
+        if re.search(r'<\s*input[^>]*type\s*=\s*["\']password["\']', line, re.IGNORECASE):
+            return False
+        if re.search(r'<.*?>', line):
+            return False
+
+        if re.search(r'(Enter\s+(password|pass)|Your\s+(password|pass))', line, re.IGNORECASE):
+            return False
+
+        if re.search(r'(password|pass)\s*=\s*["\'].*["\']', line, re.IGNORECASE):
+            return True
+        if re.search(r'set(P|p)ass(word)?\s*\(', line):
+            return True
+
+        if re.search(r'["\'](password|pass)["\']\s*:\s*["\'].*["\']', line, re.IGNORECASE):
+            return True
+
+        if re.search(r'(password|pass)\s*=\s*os\.environ\.get', line, re.IGNORECASE):
+            return False
+
+        if line.find("pass") != -1 or line.find("password") != -1:
+            return True
+
+        return False
+
+    def search_username(line):
+
+        line = line.lower().strip()
+
+        if re.search(r'<.*?>', line):
+            return False
+
+        if re.search(r'(Enter\s+(username|user|email|credential)|Your\s+(username|user|email|credential))', line, re.IGNORECASE):
+            return False
+
+        if re.search(r'(username|user|email|credential)\s*=\s*["\'].*["\']', line, re.IGNORECASE):
+            return True
+        if re.search(r'set(User(name)?|Email|Credential)\s*\(', line, re.IGNORECASE):
+            return True
+
+        if re.search(r'["\'](username|user|email|credential)["\']\s*:\s*["\'].*["\']', line, re.IGNORECASE):
+            return True
+
+        if re.search(r'(username|user|email|credential)\s*=\s*os\.environ\.get', line, re.IGNORECASE):
+            return False
+
+        return False
+
+    def search_comment(line):
+
+        if line.startswith("//") or line.startswith("<!-") or line.startswith("/*") or line.startswith("#"):
+            return True
+        if line.find(" //") != -1 or line.find("\t//") != -1 or line.find("<!-") != -1 or line.find("/*") != -1:
+            return True
+
+        return False
+    
+    line = ""
+    results = []
     for s in page:
-        if s == '\n':
+        if s != '\n':
             line += s
+        else:
+            # analyse line
+            if search_wordpress(line):
+                results.append({
+                    "name":"Wordpress",
+                    "type":"CMS",
+                    "line":line
+                })
+            if search_drupal(line):
+                results.append({
+                    "name":"Drupal",
+                    "type":"CMS",
+                    "line":line
+                })
+            if search_joomla(line):
+                results.append({
+                    "name":"Joomla",
+                    "type":"CMS",
+                    "line":line
+                })
+            if search_password(line):
+                results.append({
+                    "name":"Password",
+                    "type":"credential",
+                    "line":line
+                })
+            if search_username(line):
+                results.append({
+                    "name":"Username",
+                    "type":"credential",
+                    "line":line
+                })
+            if search_comment(line):
+                results.append({
+                    "name":"Comment",
+                    "type":"other",
+                    "line":line
+                })
+            line = ""
+    
+    for result in results:
+        toolbox.debug(f"Found {result['name']} : {result['line']}")
+
+    return results
 
 def search_technology(urls:list):
     """
@@ -236,16 +387,33 @@ def search_technology(urls:list):
 
     headers = []
     headers2url = {}
+    found_data = []
 
-    for url,source,source in urls:
-        r = requests.get(url)
-        r_headers = dict(r.headers)
-        for header in r.headers:
-            if is_header_interesting(header):
-                data = (header,r.headers[header])
-                if data not in headers:
-                    headers.append((header,r.headers[header]))
-                    headers2url[header] = url
-                    toolbox.debug(f"Found header {header}")
-        search_page_for_technology(r.text)
+    with alive_bar(len(urls), title=toolbox.get_header("INFO")+f"Searching in found URLs...", enrich_print=False) as bar:
+        for url,source,source in urls:
+            try:
+                r = requests.get(url,headers=HEADERS,verify=False)
+                bar()
+            except KeyboardInterrupt:
+                toolbox.warn("Keyboard interrupt detected, skipping search",start='\n')
+            except Exception as e:
+                bar()
+                print(e)
+                continue
+            r_headers = dict(r.headers)
+            for header in r.headers:
+                if is_header_interesting(header):
+                    data = (header,r.headers[header])
+                    if data not in headers:
+                        headers.append((header,r.headers[header]))
+                        headers2url[header] = url
+                        toolbox.debug(f"Found header {header}")
+            results = search_page_for_technology(r.text)
+            if len(results) > 0:
+                for entry in results:
+                    entry["url"] = url
+                    found_data.append(entry)
+
     # print(json.dumps(headers,indent=1))
+    # print(json.dumps(found_data,indent=1))
+    return headers,found_data
