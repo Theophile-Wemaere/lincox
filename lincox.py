@@ -95,18 +95,23 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
         # target.enumerate_web_services()
 
-        with open("target.pkl",'wb') as file:
-            pickle.dump(target,file)
+        # with open("target.pkl",'wb') as file:
+        #     pickle.dump(target,file)
 
         # target.search_technology()
 
-        with open("target.pkl",'wb') as file:
-            pickle.dump(target,file)
+        # with open("target.pkl",'wb') as file:
+        #     pickle.dump(target,file)
 
         # target.search_parameters()
 
-        with open("target.pkl",'wb') as file:
-            pickle.dump(target,file)
+        # with open("target.pkl",'wb') as file:
+        #     pickle.dump(target,file)
+
+        print(target.found_parameters)
+        # print(target.found_data)
+        # print(target.found_headers)
+
 
         if not ATTACK_MODE:
             target.create_report()
