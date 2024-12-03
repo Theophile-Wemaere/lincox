@@ -51,7 +51,7 @@ def get_header(type:str)->str:
         return timestamp_header + ' ' + '['+colored("WARNING","black","on_light_yellow")+'] '
 
     if type == "ERROR":
-        return timestamp_header + ' ' + '['+colored("WARNING","yellow","on_red")+'] '
+        return timestamp_header + ' ' + '['+colored("ERROR","yellow","on_red")+'] '
 
 
 def debug(msg):

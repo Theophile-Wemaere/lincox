@@ -150,7 +150,6 @@ class Fuzzer:
                 r = requests.post(f"{self.address}/{line}",body=self.body,headers=self.address)
         except:
             return False
-        
         return r.url,r.status_code
 
     def run(self):
@@ -175,9 +174,6 @@ class Fuzzer:
                         url,code = result
                         if code not in [403,404]:
                             url,code = result
-                            if url.find('//') != -1:
-                                url = url.replace('//','/')
-
                             toolbox.debug(f"Found path {url}")
                             # results.append((line, url, result))
                             results.append((url,code))
@@ -208,3 +204,48 @@ def get_crt_domains(address: str)-> list:
     for domain in domains:
         toolbox.debug("Found domain " + domain)
     return domains
+
+def is_header_interesting(header:str)->bool:
+    """
+    check if a header is interesting
+    """
+
+    header = header.lower()
+    if header == "server":
+        return True
+    elif header == "x-powered-by":
+        return True
+    elif header.startswith("x-"):
+        return True
+    else:
+        return False
+
+def search_page_for_technology(page:str)->dict:
+    """
+    search a webpage for well known technology markers
+    """
+    
+    for s in page:
+        if s == '\n':
+            line += s
+
+def search_technology(urls:list):
+    """
+    enumerate given urls to search for special headers or technology info
+    """
+
+    headers = []
+    headers2url = {}
+
+    for url,source,source in urls:
+        r = requests.get(url)
+        r_headers = dict(r.headers)
+        for header in r.headers:
+            if is_header_interesting(header):
+                data = (header,r.headers[header])
+                if data not in headers:
+                    headers.append((header,r.headers[header]))
+                    headers2url[header] = url
+                    toolbox.debug(f"Found header {header}")
+        search_page_for_technology(r.text)
+    # print(json.dumps(headers,indent=1))
