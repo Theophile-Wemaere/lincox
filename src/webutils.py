@@ -94,7 +94,7 @@ class Crawler:
 
             if url not in self.visited_urls and url not in self.urls_to_visit and not url.startswith('#'):
                 # hide media, js and css files
-                media = r".*\.(jpg|jpeg|png|gif|mp4|mov|avi|mp3|wav|flac|svg|js|css).*"
+                media = r".*\.(jpg|jpeg|png|gif|mp4|mov|avi|ico|mp3|wav|flac|svg|js|css).*"
                 if not re.match(media, url, re.IGNORECASE):
                     self.urls_to_visit.append(url)
 
@@ -271,7 +271,7 @@ class ParaMiner:
                                 results.append(result)
                         bar()
         except KeyboardInterrupt:
-            toolbox.warn(f"Keyboard interrupt detected, skipping Fuzzer on {self.url}",start='\n')
+            toolbox.warn(f"Keyboard interrupt detected, skipping ParaMiner on {self.url}",start='\n')
             self.STOP = True
             return []
         except Exception as e:
@@ -282,7 +282,7 @@ class ParaMiner:
 
 def get_crt_domains(address: str)-> list:
     """
-    use the API of ctr.sh to find domains names using SSL certificates
+    use the API of crt.sh to find domains names using SSL certificates
     """
 
     r = requests.get(f"https://crt.sh/?q={address}&output=json")
@@ -324,9 +324,9 @@ def search_page_for_technology(page:str)->list:
         markers = [
             "WordPress",
             "/wp-content",
+            "wp-includes",
             "/wp-admin",
-            "/themes",
-            "/plugins"
+            "/wp-"
         ]
 
         for marker in markers:
@@ -368,6 +368,7 @@ def search_page_for_technology(page:str)->list:
 
         if re.search(r'(password|pass)\s*=\s*["\'].*["\']', line, re.IGNORECASE):
             return True
+            
         if re.search(r'set(P|p)ass(word)?\s*\(', line):
             return True
 
@@ -377,7 +378,7 @@ def search_page_for_technology(page:str)->list:
         if re.search(r'(password|pass)\s*=\s*os\.environ\.get', line, re.IGNORECASE):
             return False
 
-        if line.find("pass") != -1 or line.find("password") != -1:
+        if line.find("passwd") != -1 or line.find("passphrase") != -1 or line.find("password") != -1:
             return True
 
         return False
@@ -464,6 +465,21 @@ def search_page_for_technology(page:str)->list:
 
     return results
 
+def is_url_data_blacklisted(url:str)->bool:
+    """
+    check if a url is blacklisted to avoid trash in data research results
+    """
+
+    blacklist = [
+        "git/index"
+    ]
+
+    for entry in blacklist:
+        if url.find(entry) != -1:
+            return True
+
+    return False
+
 def search_technology(urls:list):
     """
     enumerate given urls to search for special headers or technology info
@@ -475,6 +491,9 @@ def search_technology(urls:list):
 
     with alive_bar(len(urls), title=toolbox.get_header("INFO")+f"Searching in found URLs...", enrich_print=False) as bar:
         for url,source,source in urls:
+            if is_url_data_blacklisted(url):
+                bar()
+                continue
             try:
                 r = requests.get(url,headers=HEADERS,verify=False)
                 bar()

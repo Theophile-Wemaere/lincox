@@ -294,7 +294,7 @@ def html_report(self)->str:
     #region Found Headers
     section = "collapseHeaders"
     html += f"""
-    <!-- Detected URLs Section -->
+    <!-- Detected Headers Section -->
     <section class="table-container">
         <h2 class="h4 mt-4">Found Headers</h2>
 
@@ -341,18 +341,20 @@ def html_report(self)->str:
     #endregion
 
     #region Found Data
-    section = "collapseFoundData"
-    html += f"""
-    <!-- Detected URLs Section -->
+    html += """
+    <!-- Detected Data Section -->
     <section class="table-container">
-        <h2 class="h4 mt-4">Interesting Data on Technologies used and/or credentials</h2>
+        <h2 class="h4 mt-4">Interesting Data on Technologies used and/or credentials</h2>"""
 
-        <div class="accordion">
+    #region CMS
+    section = "collapseCMSFoundData"
+    html += f"""
+          <div class="accordion">
             <div class="accordion-item">
                 <h2 class="accordion-header">
                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
                         data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
-                        View Detected data ({len(self.found_data)})
+                        View Detected CMS ({len([x for x in self.found_data if x['type'] == 'CMS'])})
                     </button>
                 </h2>
                 <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
@@ -370,6 +372,8 @@ def html_report(self)->str:
     """
 
     for data in self.found_data:
+        if data['type'] != "CMS":
+          continue
         html += f"""
                                 <tr>
                                     <td>{data['name']}</td>
@@ -387,6 +391,102 @@ def html_report(self)->str:
         </div>
     </section>
     """
+    #endregion
+
+    #region Credentials
+    section = "collapseCredentialsFoundData"
+    html += f"""
+          <div class="accordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
+                        View Detected Credentials ({len([x for x in self.found_data if x['type'] == 'credential'])})
+                    </button>
+                </h2>
+                <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                    data-bs-parent="#urlsAccordion">
+                    <div class="accordion-body">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Type</th>
+                                    <th>HTML line</th>
+                                    <th>URL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+    """
+
+    for data in self.found_data:
+        if data['type'] != "credential":
+          continue
+        html += f"""
+                                <tr>
+                                    <td>{data['name']}</td>
+                                    <td>{data['line']}</td>
+                                    <td><a href="{data['url']}">{data['url']}</a></td>
+                                </tr>
+        """
+
+    html += """
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    """
+    #endregion
+
+    #region Comments
+    section = "collapseCommentsFoundData"
+    html += f"""
+          <div class="accordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
+                        View Detected Comments ({len([x for x in self.found_data if x['type'] == 'other'])})
+                    </button>
+                </h2>
+                <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                    data-bs-parent="#urlsAccordion">
+                    <div class="accordion-body">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Type</th>
+                                    <th>HTML line</th>
+                                    <th>URL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+    """
+
+    for data in self.found_data:
+        if data['type'] != "other":
+          continue
+        html += f"""
+                                <tr>
+                                    <td>{data['name']}</td>
+                                    <td>{data['line']}</td>
+                                    <td><a href="{data['url']}">{data['url']}</a></td>
+                                </tr>
+        """
+
+    html += """
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    """
+    #endregion
+
     #endregion
 
     #region Found parameter

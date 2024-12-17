@@ -2426,7 +2426,6 @@ faq
 FAQ
 faqs
 fashion
-favicon.ico
 favorite
 favorites
 fb
