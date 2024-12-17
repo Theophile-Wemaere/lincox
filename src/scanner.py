@@ -284,18 +284,8 @@ class Target:
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
         time.sleep(5)
 
-        headers, found_data = wu.search_technology(self.all_urls)
-        self.found_headers = {}
-        self.found_data = []
-        for header,value in headers:
-            if header not in self.found_headers:
-                self.found_headers[header] = []
-            self.found_headers[header].append(value)
+        self.found_headers, self.found_data = wu.search_technology(self.all_urls)
         
-        for data in found_data:
-            if data not in self.found_data:
-                self.found_data.append(data)
-
     def search_parameters(self):
         """
         try to bruteforce for common POST and GET parameters on web root
@@ -323,7 +313,6 @@ class Target:
                 for result in results:
                     if result not in self.found_parameters:
                         self.found_parameters.append(result)
-
 
     def create_report(self):
         """

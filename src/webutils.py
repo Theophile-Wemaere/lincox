@@ -470,7 +470,7 @@ def search_technology(urls:list):
     """
 
     headers = []
-    headers2url = {}
+    headers2url = []
     found_data = []
 
     with alive_bar(len(urls), title=toolbox.get_header("INFO")+f"Searching in found URLs...", enrich_print=False) as bar:
@@ -490,7 +490,7 @@ def search_technology(urls:list):
                     data = (header,r.headers[header])
                     if data not in headers:
                         headers.append((header,r.headers[header]))
-                        headers2url[header] = url
+                        headers2url.append((header,r.headers[header],url))
                         toolbox.debug(f"Found header {header}")
             results = search_page_for_technology(r.text)
             if len(results) > 0:
@@ -500,4 +500,4 @@ def search_technology(urls:list):
 
     # print(json.dumps(headers,indent=1))
     # print(json.dumps(found_data,indent=1))
-    return headers,found_data
+    return headers2url,found_data

@@ -291,6 +291,157 @@ def html_report(self)->str:
     """
     #endregion
 
+    #region Found Headers
+    section = "collapseHeaders"
+    html += f"""
+    <!-- Detected URLs Section -->
+    <section class="table-container">
+        <h2 class="h4 mt-4">Found Headers</h2>
+
+        <div class="accordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
+                        View Detected headers ({len(self.found_headers)})
+                    </button>
+                </h2>
+                <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                    data-bs-parent="#urlsAccordion">
+                    <div class="accordion-body">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Header</th>
+                                    <th>Value</th>
+                                    <th>URL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+    """
+
+    for header,value,url in self.found_headers:
+        html += f"""
+                                <tr>
+                                    <td>{header}</td>
+                                    <td>{value}</td>
+                                    <td><a href="{url}">{url}</a></td>
+                                </tr>
+        """
+
+    html += """
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    """
+    #endregion
+
+    #region Found Data
+    section = "collapseFoundData"
+    html += f"""
+    <!-- Detected URLs Section -->
+    <section class="table-container">
+        <h2 class="h4 mt-4">Interesting Data on Technologies used and/or credentials</h2>
+
+        <div class="accordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
+                        View Detected data ({len(self.found_data)})
+                    </button>
+                </h2>
+                <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                    data-bs-parent="#urlsAccordion">
+                    <div class="accordion-body">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Type</th>
+                                    <th>HTML line</th>
+                                    <th>URL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+    """
+
+    for data in self.found_data:
+        html += f"""
+                                <tr>
+                                    <td>{data['name']}</td>
+                                    <td>{data['line']}</td>
+                                    <td><a href="{data['url']}">{data['url']}</a></td>
+                                </tr>
+        """
+
+    html += """
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    """
+    #endregion
+
+    #region Found parameter
+    section = "collapseParameters"
+    html += f"""
+    <!-- Detected URLs Section -->
+    <section class="table-container">
+        <h2 class="h4 mt-4">Found Parameters</h2>
+
+        <div class="accordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
+                        View Detected parameters ({len(self.found_parameters)})
+                    </button>
+                </h2>
+                <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                    data-bs-parent="#urlsAccordion">
+                    <div class="accordion-body">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Method</th>
+                                    <th>Response</th>
+                                    <th>Size</th>
+                                    <th>URL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+    """
+
+    for url,name,response,size,method in self.found_parameters:
+        html += f"""
+                                <tr>
+                                    <td>{name}</td>
+                                    <td>{method}</td>
+                                    <td>{response}</td>
+                                    <td>{size}</td>
+                                    <td><a href="{url}">{url}</a></td>
+                                </tr>
+        """
+
+    html += """
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    """
+    #endregion
+
     html += """
       <!-- Additional Findings Section -->
       <section class="accordion mt-4" id="additional-findings">
