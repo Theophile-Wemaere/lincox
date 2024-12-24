@@ -349,6 +349,10 @@ def html_report(self)->str:
     <section class="table-container">
         <h2 class="h4 mt-4">Interesting Data on Technologies used and/or credentials</h2>"""
 
+    # temporary
+    from src import toolbox
+    self.found_data = toolbox.dict_filter_duplicates(self.found_data,"line")
+
     #region CMS
     if len([x for x in self.found_data if x['type'] == 'CMS']) > 0:
       section = "collapseCMSFoundData"
@@ -496,133 +500,134 @@ def html_report(self)->str:
     #endregion
 
     #region Found parameter
-    section = "collapseParameters"
-    html += f"""
-    <!-- Detected URLs Section -->
-    <section class="table-container">
-        <h2 class="h4 mt-4">Found Parameters</h2>
-
-        <div class="accordion">
-            <div class="accordion-item">
-                <h2 class="accordion-header">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                        data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
-                        View Detected parameters ({len(self.found_parameters)})
-                    </button>
-                </h2>
-                <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
-                    data-bs-parent="#urlsAccordion">
-                    <div class="accordion-body">
-                        <table class="table table-bordered table-striped">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Method</th>
-                                    <th>Response</th>
-                                    <th>Size</th>
-                                    <th>URL</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-    """
-
-    for url,name,response,size,method in self.found_parameters:
+    if len(self.url_parameters) > 0:
+        section = "collapseParameters"
         html += f"""
-                                <tr>
-                                    <td>{name}</td>
-                                    <td>{method}</td>
-                                    <td>{response}</td>
-                                    <td>{size}</td>
-                                    <td><a href="{url}">{url}</a></td>
-                                </tr>
+        <!-- Detected URLs Section -->
+        <section class="table-container">
+            <h2 class="h4 mt-4">Found Parameters</h2>
+
+            <div class="accordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                            data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
+                            View Detected parameters ({len(self.url_parameters)})
+                        </button>
+                    </h2>
+                    <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                        data-bs-parent="#urlsAccordion">
+                        <div class="accordion-body">
+                            <table class="table table-bordered table-striped">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Method</th>
+                                        <th>Response</th>
+                                        <th>Size</th>
+                                        <th>URL</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
         """
 
-    html += """
-                            </tbody>
-                        </table>
+        for url,name,response,size,method in self.url_parameters:
+            html += f"""
+                                    <tr>
+                                        <td>{name}</td>
+                                        <td>{method}</td>
+                                        <td>{response}</td>
+                                        <td>{size}</td>
+                                        <td><a href="{url}">{url}</a></td>
+                                    </tr>
+            """
+
+        html += """
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
-    """
-    #endregion
+        </section>
+        """
+        #endregion
 
-    html += """
-      <!-- Additional Findings Section -->
-      <section class="accordion mt-4" id="additional-findings">
-        <h2 class="h4">Additional Findings</h2>
+        html += """
+        <!-- Additional Findings Section -->
+        <section class="accordion mt-4" id="additional-findings">
+            <h2 class="h4">Additional Findings</h2>
 
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="headingOne">
-            <button
-              class="accordion-button"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#collapseOne"
-              aria-expanded="true"
-              aria-controls="collapseOne"
+            <div class="accordion-item">
+            <h2 class="accordion-header" id="headingOne">
+                <button
+                class="accordion-button"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#collapseOne"
+                aria-expanded="true"
+                aria-controls="collapseOne"
+                >
+                Vulnerabilities
+                </button>
+            </h2>
+            <div
+                id="collapseOne"
+                class="accordion-collapse collapse show"
+                aria-labelledby="headingOne"
+                data-bs-parent="#additional-findings"
             >
-              Vulnerabilities
-            </button>
-          </h2>
-          <div
-            id="collapseOne"
-            class="accordion-collapse collapse show"
-            aria-labelledby="headingOne"
-            data-bs-parent="#additional-findings"
-          >
-            <div class="accordion-body">
-              <ul>
-                <li>
-                  SQL Injection vulnerability detected on `/login` endpoint
-                </li>
-                <li>
-                  Cross-Site Scripting (XSS) detected on `/search` endpoint
-                </li>
-                <li>Insecure Cookies found in HTTP responses</li>
-              </ul>
+                <div class="accordion-body">
+                <ul>
+                    <li>
+                    SQL Injection vulnerability detected on `/login` endpoint
+                    </li>
+                    <li>
+                    Cross-Site Scripting (XSS) detected on `/search` endpoint
+                    </li>
+                    <li>Insecure Cookies found in HTTP responses</li>
+                </ul>
+                </div>
             </div>
-          </div>
-        </div>
+            </div>
 
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="headingTwo">
-            <button
-              class="accordion-button collapsed"
-              type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#collapseTwo"
-              aria-expanded="false"
-              aria-controls="collapseTwo"
+            <div class="accordion-item">
+            <h2 class="accordion-header" id="headingTwo">
+                <button
+                class="accordion-button collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#collapseTwo"
+                aria-expanded="false"
+                aria-controls="collapseTwo"
+                >
+                Recommendations
+                </button>
+            </h2>
+            <div
+                id="collapseTwo"
+                class="accordion-collapse collapse"
+                aria-labelledby="headingTwo"
+                data-bs-parent="#additional-findings"
             >
-              Recommendations
-            </button>
-          </h2>
-          <div
-            id="collapseTwo"
-            class="accordion-collapse collapse"
-            aria-labelledby="headingTwo"
-            data-bs-parent="#additional-findings"
-          >
-            <div class="accordion-body">
-              <ol>
-                <li>
-                  Implement parameterized queries to prevent SQL Injection
-                </li>
-                <li>
-                  Use Content Security Policy (CSP) to mitigate XSS attacks
-                </li>
-                <li>Set `HttpOnly` and `Secure` flags on cookies</li>
-              </ol>
+                <div class="accordion-body">
+                <ol>
+                    <li>
+                    Implement parameterized queries to prevent SQL Injection
+                    </li>
+                    <li>
+                    Use Content Security Policy (CSP) to mitigate XSS attacks
+                    </li>
+                    <li>Set `HttpOnly` and `Secure` flags on cookies</li>
+                </ol>
+                </div>
             </div>
-          </div>
+            </div>
+        </section>
         </div>
-      </section>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-  </body>
-</html>
-    """
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
+    </html>
+        """
     return html

@@ -22,7 +22,7 @@ class Target:
         self.found_data = []
         self.found_headers = []
         self.forms_list = []
-        self.found_parameters = []
+        self.url_parameters = []
 
     def initialize(self):
         """
@@ -119,8 +119,8 @@ class Target:
 
         # possibility of adding ssh://, ftp://, ...
         protocols = [
-            "https",
-            "http"
+            "http",
+            "https"
         ]
 
         found = False
@@ -157,12 +157,12 @@ class Target:
                 to_scan = [self.port]
                 self.ports_args = str(self.port)
             elif hasattr(self,'protocol'):
-                if self.protocol.find("http") != -1:
-                    to_scan = [80]
-                    self.ports_args = "80"
-                elif self.protocol.find("https") != -1:
+                if self.protocol.find("https") != -1:
                     to_scan = [443]
                     self.ports_args = "443"
+                elif self.protocol.find("http") != -1:
+                    to_scan = [80]
+                    self.ports_args = "80"
             else:
                 to_scan = [80,443]
                 self.ports_args = "80,443"
@@ -240,6 +240,8 @@ class Target:
                     if fl not in self.forms_list:
                         self.forms_list.append(fl)
 
+        self.found_data = toolbox.dict_filter_duplicates(self.found_data,"line")
+
         toolbox.tprint(f"Found {len(self.crawled_urls)} URL(s) on {self.target} via crawling")
         toolbox.tprint(f"Found {len(self.found_headers)} interesting headers, {len(self.found_data)} interesting data and {len(self.forms_list)} forms")
 
@@ -315,7 +317,7 @@ class Target:
         """
 
         wordlist = "data/burp-parameter-names.txt"
-        self.found_parameters = []
+        self.url_parameters = []
 
         for service in self.services:
             data = self.services[service]
@@ -333,17 +335,26 @@ class Target:
 
                 results = wu.ParaMiner(url,wordlist).run()
                 for result in results:
-                    if result not in self.found_parameters:
-                        self.found_parameters.append(result)
+                    if result not in self.url_parameters:
+                        self.url_parameters.append(result)
 
         for url in self.all_urls:
             if url[0].find('?') != -1:
                 parameters = url[0][url[0].find('?')+1:].split('&')
                 for parameter in parameters:
-                    parameter = parameter.split('=')[0]
-                    self.found_parameters.append([url[0],parameter,'200','0','GET'])
+                    parameter = parameter.split('=')[0].split('#')[0] # remove fragment if found
+                    data = [url[0].split('?')[0],parameter,'200','0','GET']
+                    if data not in self.url_parameters:
+                        self.url_parameters.append(data)
 
-        toolbox.tprint(f"Got {len([x for x in self.found_parameters if x[-1] == "GET"])} get parameter to test")
+        for form in self.forms_list:
+            if form["method"] == "get":
+                for param in form["parameters"]:
+                    data = [form["url"].split('#')[0].split('?')[0],param["name"],'200','0','GET']
+                    if data not in self.url_parameters:
+                        self.url_parameters.append(data)
+
+        toolbox.tprint(f"Got {len([x for x in self.url_parameters if x[-1] == "GET"])} get parameter to test")
         toolbox.tprint(f"Got {len([x for x in self.forms_list if x["method"].lower() == "get"])} get forms to test")
 
     def create_report(self):

@@ -57,7 +57,7 @@ class Crawler:
                         self.found_data.append(entry)
 
                 # form research
-                self.forms_list += search_page_for_form(r.text)
+                self.forms_list += search_page_for_form(r.text,r.url)
             return r.text
 
         except KeyboardInterrupt:
@@ -117,7 +117,7 @@ class Crawler:
 
             if url not in self.visited_urls and url not in self.urls_to_visit and not url.startswith('#'):
                 # hide media, js and css files
-                media = r".*\.(jpg|jpeg|png|gif|mp4|mov|avi|ico|mp3|wav|flac|svg|js|css|pdf).*"
+                media = r".*\.(jpg|jpeg|png|gif|mp4|mov|avi|ico|mp3|wav|flac|svg|js|css|pdf|webp).*"
                 if not re.match(media, url, re.IGNORECASE):
                     self.urls_to_visit.append(url)
 
@@ -256,7 +256,7 @@ class ParaMiner:
         }
         r = requests.post(f"{self.url}",data=body,headers=HEADERS,verify=False)
         if len(r.text) != self.default_size:
-            return r.url,line,r.status_code,len(r.text),"POST"
+            return self.url,line,r.status_code,len(r.text),"POST"
         return False
 
         return False 
@@ -510,7 +510,7 @@ def is_url_data_blacklisted(url:str)->bool:
 
     return False
 
-def search_page_for_form(page:str)-> list:
+def search_page_for_form(page:str,url:str)-> list:
     """
     search a webpage for form to test
     """
@@ -524,6 +524,7 @@ def search_page_for_form(page:str)-> list:
             form_info = {
                 "method": form.get('method', 'get').lower(),
                 "action": form.get('action'),
+                "url": url,
                 "parameters": []
             }
 
