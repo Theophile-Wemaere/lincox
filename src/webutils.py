@@ -1,3 +1,4 @@
+from html import escape
 from src import toolbox
 from src import networkutils as nu
 from urllib.parse import urljoin
@@ -12,6 +13,7 @@ import re
 import warnings
 from urllib3.exceptions import InsecureRequestWarning
 warnings.filterwarnings('ignore', category=bs4.XMLParsedAsHTMLWarning)
+warnings.filterwarnings('ignore', category=bs4.MarkupResemblesLocatorWarning)
 requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 
 HEADERS = {
@@ -27,6 +29,10 @@ class Crawler:
         self.root_domain = nu.get_domain(url[0])
         self.all_urls = []
         self.STOP = False
+        self.headers = []
+        self.headers2url = []
+        self.found_data = []
+        self.forms_list = []
 
     def __download_url(self, url):
         try:
@@ -35,13 +41,30 @@ class Crawler:
                 toolbox.debug(f"Found path {r.url}")
                 self.all_urls.append((r.url,r.status_code))
                 self.visited_urls.append(url)
+
+                # data research
+                for header in r.headers:
+                    if is_header_interesting(header):
+                        data = (header,r.headers[header])
+                        if data not in self.headers:
+                            self.headers.append((header,r.headers[header]))
+                            self.headers2url.append((header,r.headers[header],url))
+                            toolbox.debug(f"Found header {header}")
+                results = search_page_for_technology(r.text,url)
+                if len(results) > 0:
+                    for entry in results:
+                        entry["url"] = url
+                        self.found_data.append(entry)
+
+                # form research
+                self.forms_list += search_page_for_form(r.text)
             return r.text
+
         except KeyboardInterrupt:
             toolbox.warn(f"Keyboard interrupt detected, skipping Crawler on {self.address}",start='\n')
             self.STOP = True
         except Exception as e:
-            print(url)
-            print(e)
+            print("Exception :",url,e)
             return False
 
     def __get_linked_urls(self, url, html):
@@ -94,7 +117,7 @@ class Crawler:
 
             if url not in self.visited_urls and url not in self.urls_to_visit and not url.startswith('#'):
                 # hide media, js and css files
-                media = r".*\.(jpg|jpeg|png|gif|mp4|mov|avi|ico|mp3|wav|flac|svg|js|css).*"
+                media = r".*\.(jpg|jpeg|png|gif|mp4|mov|avi|ico|mp3|wav|flac|svg|js|css|pdf).*"
                 if not re.match(media, url, re.IGNORECASE):
                     self.urls_to_visit.append(url)
 
@@ -105,10 +128,11 @@ class Crawler:
                 self.__add_url_to_visit(url)
 
     def run(self):
+
         while self.urls_to_visit:
 
             if self.STOP:
-                return self.all_urls
+                return self.all_urls, self.headers2url, self.found_data, self.forms_list
 
             toolbox.tprint(f"Found {len(self.visited_urls)} urls, got {len(self.urls_to_visit)} to visit",end='\r')
             url = self.urls_to_visit.pop(0)
@@ -119,7 +143,7 @@ class Crawler:
             finally:
                 self.visited_urls.append(url)
         
-        return self.all_urls
+        return self.all_urls, self.headers2url, self.found_data, self.forms_list
 
 class Fuzzer:
 
@@ -217,6 +241,9 @@ class ParaMiner:
 
     def __fetch_url(self,line:str)->str:
 
+        if self.STOP:
+            return
+
         value = "/etc/passwd"
 
         r = requests.get(f"{self.url}?{line}={value}",headers=HEADERS,verify=False)
@@ -269,6 +296,9 @@ class ParaMiner:
                             if code not in self.bad_codes and size != self.default_size:
                                 toolbox.debug(f"Found parameter {parameter} with {method} request")
                                 results.append(result)
+
+                        if self.STOP:
+                            break
                         bar()
         except KeyboardInterrupt:
             toolbox.warn(f"Keyboard interrupt detected, skipping ParaMiner on {self.url}",start='\n')
@@ -315,7 +345,7 @@ def is_header_interesting(header:str)->bool:
     else:
         return False
 
-def search_page_for_technology(page:str)->list:
+def search_page_for_technology(page:str,url:str)->list:
     """
     search a webpage for well known technology markers
     """
@@ -421,42 +451,42 @@ def search_page_for_technology(page:str)->list:
         if s != '\n':
             line += s
         else:
-            # analyse line
+            # analyse line for markers
             if search_wordpress(line):
                 results.append({
                     "name":"Wordpress",
                     "type":"CMS",
-                    "line":line
+                    "line":escape(line)
                 })
             if search_drupal(line):
                 results.append({
                     "name":"Drupal",
                     "type":"CMS",
-                    "line":line
+                    "line":escape(line)
                 })
             if search_joomla(line):
                 results.append({
                     "name":"Joomla",
                     "type":"CMS",
-                    "line":line
+                    "line":escape(line)
                 })
             if search_password(line):
                 results.append({
                     "name":"Password",
                     "type":"credential",
-                    "line":line
+                    "line":escape(line)
                 })
             if search_username(line):
                 results.append({
                     "name":"Username",
                     "type":"credential",
-                    "line":line
+                    "line":escape(line)
                 })
             if search_comment(line):
                 results.append({
                     "name":"Comment",
                     "type":"other",
-                    "line":line
+                    "line":escape(line)
                 })
             line = ""
     
@@ -480,43 +510,92 @@ def is_url_data_blacklisted(url:str)->bool:
 
     return False
 
-def search_technology(urls:list):
+def search_page_for_form(page:str)-> list:
     """
-    enumerate given urls to search for special headers or technology info
+    search a webpage for form to test
     """
 
-    headers = []
-    headers2url = []
-    found_data = []
+    soup = bs4.BeautifulSoup(page, 'html.parser')
+    forms = soup.find_all('form')
+    form_data_list = []
 
-    with alive_bar(len(urls), title=toolbox.get_header("INFO")+f"Searching in found URLs...", enrich_print=False) as bar:
-        for url,source,source in urls:
-            if is_url_data_blacklisted(url):
-                bar()
-                continue
-            try:
-                r = requests.get(url,headers=HEADERS,verify=False)
-                bar()
-            except KeyboardInterrupt:
-                toolbox.warn("Keyboard interrupt detected, skipping search",start='\n')
-            except Exception as e:
-                bar()
-                print(e)
-                continue
-            r_headers = dict(r.headers)
-            for header in r.headers:
-                if is_header_interesting(header):
-                    data = (header,r.headers[header])
-                    if data not in headers:
-                        headers.append((header,r.headers[header]))
-                        headers2url.append((header,r.headers[header],url))
-                        toolbox.debug(f"Found header {header}")
-            results = search_page_for_technology(r.text)
-            if len(results) > 0:
-                for entry in results:
-                    entry["url"] = url
-                    found_data.append(entry)
+    for form in forms:
+        if form.has_attr('action'):
+            form_info = {
+                "method": form.get('method', 'get').lower(),
+                "action": form.get('action'),
+                "parameters": []
+            }
 
-    # print(json.dumps(headers,indent=1))
-    # print(json.dumps(found_data,indent=1))
-    return headers2url,found_data
+            for input_tag in form.find_all('input'):
+                param = {
+                    "name": input_tag.get('name'),
+                    "type": input_tag.get('type', 'text').lower(),
+                    "value": input_tag.get('value')
+                }
+                if param["name"]:
+                    form_info["parameters"].append(param)
+            for textarea_tag in form.find_all('textarea'):
+                param = {
+                    "name": textarea_tag.get('name'),
+                    "type": "textarea",
+                    "value": textarea_tag.text
+                }
+                if param["name"]:
+                    form_info["parameters"].append(param)
+            for select_tag in form.find_all('select'):
+              for option_tag in select_tag.find_all('option'):
+                if option_tag.has_attr('selected'):
+                  param = {
+                      "name": select_tag.get('name'),
+                      "type": "select",
+                      "value": option_tag.get('value')
+                  }
+                  if param["name"]:
+                      form_info["parameters"].append(param)
+
+            form_data_list.append(form_info)
+
+    return form_data_list
+
+
+# def search_technology(urls:list):
+#     """
+#     enumerate given urls to search for special headers or technology info
+#     """
+
+#     headers = []
+#     headers2url = []
+#     found_data = []
+
+#     with alive_bar(len(urls), title=toolbox.get_header("INFO")+f"Searching in found URLs...", enrich_print=False) as bar:
+#         for url,source,source in urls:
+#             if is_url_data_blacklisted(url):
+#                 bar()
+#                 continue
+#             try:
+#                 r = requests.get(url,headers=HEADERS,verify=False)
+#                 bar()
+#             except KeyboardInterrupt:
+#                 toolbox.warn("Keyboard interrupt detected, skipping search",start='\n')
+#             except Exception as e:
+#                 bar()
+#                 print(e)
+#                 continue
+#             r_headers = dict(r.headers)
+#             for header in r.headers:
+#                 if is_header_interesting(header):
+#                     data = (header,r.headers[header])
+#                     if data not in headers:
+#                         headers.append((header,r.headers[header]))
+#                         headers2url.append((header,r.headers[header],url))
+#                         toolbox.debug(f"Found header {header}")
+#             results = search_page_for_technology(r.text,url)
+#             if len(results) > 0:
+#                 for entry in results:
+#                     entry["url"] = url
+#                     found_data.append(entry)
+
+#     # print(json.dumps(headers,indent=1))
+#     # print(json.dumps(found_data,indent=1))
+#     return headers2url,found_data

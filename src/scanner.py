@@ -19,6 +19,10 @@ class Target:
         self.ports_list = [80,443,8000,8080,8081,8443]
         self.ports_args = ",".join(list(map(str,self.ports_list)))
         self.override_port = False
+        self.found_data = []
+        self.found_headers = []
+        self.forms_list = []
+        self.found_parameters = []
 
     def initialize(self):
         """
@@ -131,9 +135,10 @@ class Target:
 
         if self.target.find(f"{self.address}:") != -1:
             rest = self.target[self.target.find(self.protocol)+len(self.protocol)+3:] if hasattr(self,'protocol') else self.target
-            port_regex = r":([0-9]{1,4})"
-            if re.match(port_regex,rest):
-                self.port = re.match(port_regex,self.target).group(1)
+            port_regex = r":([0-9]{1,5})"
+            match = re.search(port_regex,rest)
+            if match:
+                self.port = re.search(port_regex,self.target).group(1)
                 toolbox.debug(f"Found port in target : {self.port}")
 
     def search_services(self):
@@ -145,7 +150,7 @@ class Target:
         to_scan = self.ports_list
 
         if hasattr(self,'port'):
-            to_scan += int(self.port)
+            to_scan += [int(self.port)]
 
         if self.scope == "strict":
             if hasattr(self,'port'):
@@ -167,11 +172,16 @@ class Target:
 
         self.ports = nu.PortScanner(self.address).run(to_scan)
         
-        if len(self.ports) == 0:
-            toolbox.exit_error(f"No open ports found on {self.address}, use -p to specify port(s) to scan",0)
+        if len(self.ports) == 0 and not self.force_scan:
+            toolbox.exit_error(f"No open ports found on {self.address}, use -p to specify port(s) to scan or -f to force scan",0)
+        
+        if len(self.ports) > 0:
+            toolbox.tprint(f"Open ports found on {self.address} : {",".join([str(port) for port in self.ports])}")
+            toolbox.tprint("Enumerating services with nmap (can take a few minutes)...")
+        
+        if len(self.ports) == 0 and self.force_scan:
+            self.ports = to_scan
 
-        toolbox.tprint(f"Open ports found on {self.address} : {",".join([str(port) for port in self.ports])}")
-        toolbox.tprint("Enumerating services with nmap (can take a few minutes)...")
         self.services = nu.nmap_scan(self.address,",".join([str(port) for port in self.ports]))
         f = False
         for service in self.services:
@@ -213,12 +223,25 @@ class Target:
 
 
                 toolbox.tprint(f"Crawling from {url}")
-                crawled_urls = wu.Crawler(url=[url],visited_urls=visited_urls).run()
+                crawled_urls, found_headers, found_data, forms_list = wu.Crawler(url=[url],visited_urls=visited_urls).run()
                 for url,code in crawled_urls:
                     self.crawled_urls.append((url,code))
                     visited_urls.append(url)
 
+                for fh in found_headers:
+                    if fh not in self.found_headers:
+                        self.found_headers.append(fh)
+
+                for fd in found_data:
+                    if fd not in self.found_data:
+                        self.found_data.append(fd)
+
+                for fl in forms_list:
+                    if fl not in self.forms_list:
+                        self.forms_list.append(fl)
+
         toolbox.tprint(f"Found {len(self.crawled_urls)} URL(s) on {self.target} via crawling")
+        toolbox.tprint(f"Found {len(self.found_headers)} interesting headers, {len(self.found_data)} interesting data and {len(self.forms_list)} forms")
 
         toolbox.tprint(f"Running Fuzzer on {self.target}")
         for service in self.services:
@@ -276,15 +299,15 @@ class Target:
             #     for domain in alives:
             #         file.write(domain+"\n")
 
-    def search_technology(self):
-        """
-        enumerate found urls with crawler and fuzzer to search for special headers and technology markers
-        """
+    # def search_technology(self):
+    #     """
+    #     enumerate found urls with crawler and fuzzer to search for special headers and technology markers
+    #     """
         
-        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
-        time.sleep(5)
+    #     toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+    #     time.sleep(5)
 
-        self.found_headers, self.found_data = wu.search_technology(self.all_urls)
+    #     self.found_headers, self.found_data = wu.search_technology(self.all_urls)
         
     def search_parameters(self):
         """
@@ -292,7 +315,6 @@ class Target:
         """
 
         wordlist = "data/burp-parameter-names.txt"
-
         self.found_parameters = []
 
         for service in self.services:
@@ -313,6 +335,16 @@ class Target:
                 for result in results:
                     if result not in self.found_parameters:
                         self.found_parameters.append(result)
+
+        for url in self.all_urls:
+            if url[0].find('?') != -1:
+                parameters = url[0][url[0].find('?')+1:].split('&')
+                for parameter in parameters:
+                    parameter = parameter.split('=')[0]
+                    self.found_parameters.append([url[0],parameter,'200','0','GET'])
+
+        toolbox.tprint(f"Got {len([x for x in self.found_parameters if x[-1] == "GET"])} get parameter to test")
+        toolbox.tprint(f"Got {len([x for x in self.forms_list if x["method"].lower() == "get"])} get forms to test")
 
     def create_report(self):
         """
