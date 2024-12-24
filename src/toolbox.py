@@ -21,7 +21,7 @@ def print_banner():
  ███████████ █████ █████  ░░█████ ░░█████████  ░░░███████░   █████ █████
 ░░░░░░░░░░░ ░░░░░ ░░░░░    ░░░░░   ░░░░░░░░░     ░░░░░░░    ░░░░░ ░░░░░
 
-    By Theophile.W, Quentin.L, Maximilien.L, Maxime.V and Nithyalakshmi.P
+By Theophile.W, Quentin.L, Maximilien.L, Maxime.V and Nithyalakshmi.P
         
 """
     print(banner)
