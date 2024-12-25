@@ -86,3 +86,12 @@ def isint(v):
     except:  
         return False
     return True
+
+def dict_filter_duplicates(dicts:list,filter:str)->list:
+    seen_values = set()
+    unique_dicts = []
+    for d in dicts:
+        if d[filter] not in seen_values:
+            unique_dicts.append(d)
+            seen_values.add(d[filter])
+    return unique_dicts

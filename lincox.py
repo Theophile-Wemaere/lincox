@@ -95,8 +95,8 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
         # target.enumerate_web_services()
 
-        # with open("target.pkl",'wb') as file:
-        #     pickle.dump(target,file)
+        with open("target.pkl",'wb') as file:
+            pickle.dump(target,file)
 
         # set inside crawler now
         # target.search_technology()
