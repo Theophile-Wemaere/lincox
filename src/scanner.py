@@ -357,6 +357,21 @@ class Target:
         toolbox.tprint(f"Got {len([x for x in self.url_parameters if x[-1] == "GET"])} get parameter to test")
         toolbox.tprint(f"Got {len([x for x in self.forms_list if x["method"].lower() == "get"])} get forms to test")
 
+    def search_xss(self):
+        """
+        search for reflected XSS in GET parameters
+        todo : search for DOM XSS with selenium
+        """
+
+        if len(self.url_parameters) == 0:
+            toolbox.tprint("No GET parameters found on target, skipping RXSS detection")
+
+        for param in self.url_parameters:
+            result = wu.test_reflection(param[0],param[1],"GET")
+            if result:
+                # todo : test multiples payload depending on reflection context
+                toolbox.vprint(f"Possible XSS on {param[0]}/?{param[1]}=here",level=2)
+
     def create_report(self):
         """
         create a report of the scan results
