@@ -9,6 +9,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from alive_progress import alive_bar
 import json
 import re
+import random
+
 
 import warnings
 from urllib3.exceptions import InsecureRequestWarning
@@ -19,6 +21,13 @@ requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
 HEADERS = {
     "User-Agent":"lincox 1.0"
 }
+
+def get_headers():
+
+    # random user agent for FW bypass (work sometimes)
+    HEADERS["User-Agent"] += "." + str(random.getrandbits(24))
+
+    return HEADERS
 
 class Crawler:
 
@@ -36,7 +45,7 @@ class Crawler:
 
     def __download_url(self, url):
         try:
-            r = requests.get(url,allow_redirects=True,headers=HEADERS,verify=False)
+            r = requests.get(url,allow_redirects=True,headers=get_headers(),verify=False)
             if r.url not in self.all_urls:
                 toolbox.debug(f"Found path {r.url}")
                 self.all_urls.append((r.url,r.status_code))
@@ -174,9 +183,9 @@ class Fuzzer:
 
         r = None
         if self.method == "GET":
-            r = requests.get(f"{self.address}/{line}",headers=HEADERS,verify=False)
+            r = requests.get(f"{self.address}/{line}",headers=get_headers(),verify=False)
         elif self.method == "POST":
-            r = requests.post(f"{self.address}/{line}",data=self.body,headers=HEADERS,verify=False)
+            r = requests.post(f"{self.address}/{line}",data=self.body,headers=get_headers(),verify=False)
         return r.url,r.status_code,len(r.text)
 
     def run(self):
@@ -246,7 +255,7 @@ class ParaMiner:
 
         value = "/etc/passwd"
 
-        r = requests.get(f"{self.url}?{line}={value}",headers=HEADERS,verify=False)
+        r = requests.get(f"{self.url}?{line}={value}",headers=get_headers(),verify=False)
         if len(r.text) != self.default_size:
             return r.url,line,r.status_code,len(r.text),"GET"
         
@@ -254,7 +263,7 @@ class ParaMiner:
         body = {
             f"{line}":f"{value}"
         }
-        r = requests.post(f"{self.url}",data=body,headers=HEADERS,verify=False)
+        r = requests.post(f"{self.url}",data=body,headers=get_headers(),verify=False)
         if len(r.text) != self.default_size:
             return self.url,line,r.status_code,len(r.text),"POST"
         return False
@@ -270,11 +279,11 @@ class ParaMiner:
             toolbox.exit_error(f"Error, {file_path} seems to be empty",1)
 
         results = []
-        self.default_size = len(requests.get(f"{self.url}",headers=HEADERS,verify=False).text)
+        self.default_size = len(requests.get(f"{self.url}",headers=get_headers(),verify=False).text)
 
         # get default code for unknown parameter
-        self.default_code_get = requests.get(f"{self.url}/?LINCOX=lugi",headers=HEADERS,verify=False).status_code
-        self.default_code_post = requests.post(f"{self.url}",data={"LINCOX":"albert-fish"},headers=HEADERS,verify=False).status_code
+        self.default_code_get = requests.get(f"{self.url}/?LINCOX=lugi",headers=get_headers(),verify=False).status_code
+        self.default_code_post = requests.post(f"{self.url}",data={"LINCOX":"albert-fish"},headers=get_headers(),verify=False).status_code
 
         self.bad_codes = [403,404,405]
         if self.default_code_get != 200:
@@ -559,6 +568,48 @@ def search_page_for_form(page:str,url:str)-> list:
 
     return form_data_list
 
+def test_reflection(url:str,param:str,method:str)->str:
+    """
+    test reflection with a parameter for XSS attack
+    """
+
+    def search_reflection(page:str,payload):
+        """
+        search for payload inside response page
+        """
+        line = ""
+        for c in page:
+            if c == "\n":
+                if line.find(payload) != -1:
+                    return True
+                line = ""
+            else:
+                line += c
+        return False
+
+    payloads = [
+        "lincox><",
+        "lincox\"=",
+    ]
+
+    found = 0
+    best_payload = ""
+
+    for payload in payloads:
+        if method == "GET":
+            r = requests.get(f"{url}/?{param}={payload}",headers=get_headers())
+        elif method == "POST":
+            r = requests.post(f"{url}",data={param:payload},headers=get_headers())
+        if search_reflection(r.text,payload):
+            found += 1
+            best_payload = payload
+
+    if found == 0:
+        return None
+    elif found == 1:
+        return best_payload
+    elif found == 2:
+        return "><\"="
 
 # def search_technology(urls:list):
 #     """
@@ -575,7 +626,7 @@ def search_page_for_form(page:str,url:str)-> list:
 #                 bar()
 #                 continue
 #             try:
-#                 r = requests.get(url,headers=HEADERS,verify=False)
+#                 r = requests.get(url,headers=get_headers(),verify=False)
 #                 bar()
 #             except KeyboardInterrupt:
 #                 toolbox.warn("Keyboard interrupt detected, skipping search",start='\n')

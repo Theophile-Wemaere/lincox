@@ -53,6 +53,14 @@ def get_header(type:str)->str:
     if type == "ERROR":
         return timestamp_header + ' ' + '['+colored("ERROR","yellow","on_red")+'] '
 
+    if type == "VULN0":
+        return timestamp_header + ' ' + '['+colored("INFO","black","on_blue")+'] '
+    if type == "VULN1":
+        return timestamp_header + ' ' + '['+colored("LOW","black","on_yellow")+'] '
+    if type == "VULN2":
+        return timestamp_header + ' ' + '['+colored("MEDIUM","black","on_light_red")+'] '
+    if type == "VULN3":
+        return timestamp_header + ' ' + '['+colored("HIGH","white","on_red")+'] '
 
 def debug(msg):
     """
@@ -70,6 +78,19 @@ def tprint(*args,start='',end='\n'):
     """
     print(start,end='')
     print(get_header("INFO")+" ".join(map(str, args)),end='')
+    print(end,end='')
+
+def vprint(*args,start='',end='\n',level=0):
+    """
+    vulnerability print with timestamp and colors
+    level 0 : blue
+    level 1 : yellow
+    level 2 : orange
+    level 3 : red 
+    """
+
+    print(start,end='')
+    print(get_header(f"VULN{level}") + " ".join(map(str, args)), end='')
     print(end,end='')
 
 def warn(*args,start='',end='\n'):
