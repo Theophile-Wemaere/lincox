@@ -48,6 +48,9 @@ def get_header(type:str)->str:
     if type == "INFO":
         return timestamp_header + ' ' + '['+colored("INFO","green")+'] '
 
+    if type == "ATTACK":
+        return timestamp_header + ' ' + '['+colored("ATTACK","light_red",attrs=["bold"])+'] '
+
     if type == "WARNING":
         return timestamp_header + ' ' + '['+colored("WARNING","black","on_light_yellow")+'] '
 
@@ -55,11 +58,11 @@ def get_header(type:str)->str:
         return timestamp_header + ' ' + '['+colored("ERROR","yellow","on_red")+'] '
 
     if type == "VULN1":
-        return timestamp_header + ' ' + '['+colored("LOW","black","on_blue")+'] '
+        return timestamp_header + ' ' + '['+colored("LOW","black","on_blue",attrs=["bold"])+'] '
     if type == "VULN2":
-        return timestamp_header + ' ' + '['+colored("MEDIUM","black","on_yellow")+'] '
+        return timestamp_header + ' ' + '['+colored("MEDIUM","black","on_yellow",attrs=["bold"])+'] '
     if type == "VULN3":
-        return timestamp_header + ' ' + '['+colored("HIGH","black","on_light_red")+'] '
+        return timestamp_header + ' ' + '['+colored("HIGH","black","on_light_red",attrs=["bold"])+'] '
 
 def debug(msg):
     """
