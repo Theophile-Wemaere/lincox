@@ -95,31 +95,28 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
         # target.enumerate_web_services()
 
-        with open("target.pkl",'wb') as file:
-            pickle.dump(target,file)
+        # # with open("target.pkl",'wb') as file:
+        # #     pickle.dump(target,file)
 
-        # set inside crawler now
-        # target.search_technology()
+        # target.search_parameters()
 
-        with open("target.pkl",'wb') as file:
-            pickle.dump(target,file)
-
-        # target.search_parameters()
-
-        with open("target.pkl",'wb') as file:
-            pickle.dump(target,file)
+        # with open("target.pkl",'wb') as file:
+        #     pickle.dump(target,file)
 
         # print(target.found_parameters)
         # print(target.found_data)
         # print(target.found_headers)
-
-        if ATTACK_MODE:
-            target.search_xss()
-
+        
         if not ATTACK_MODE:
             target.create_report()
             exit(0)
 
+        target.create_report()
+        
+        target.search_xss()
+
+
+        
     if SHOW_HELP:
         parser.print_help()
         # TODO : custom help menu

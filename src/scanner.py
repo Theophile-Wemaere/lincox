@@ -1,6 +1,7 @@
 from src import toolbox
 from src import webutils as wu
 from src import networkutils as nu
+from src import vulntest as vt
 from src import reporting
 import re
 import os
@@ -240,9 +241,26 @@ class Target:
                     if fl not in self.forms_list:
                         self.forms_list.append(fl)
 
+        self.crawled_urls = list(set(self.crawled_urls))
         self.found_data = toolbox.dict_filter_duplicates(self.found_data,"line")
 
         toolbox.tprint(f"Found {len(self.crawled_urls)} URL(s) on {self.target} via crawling")
+
+        to_pop = []
+        for i in range(len(self.forms_list)):
+            form = self.forms_list[i]
+            if len(form['parameters']) == 0:
+                toolbox.tprint(f"Trying to get more info on form at {form['url']}, please wait")
+                to_pop += [i]
+                # try to get more info using selenium (in case form is generated on client side with JS)
+                forms = wu.get_form_w_selenium(form['url'])
+                for form in forms:
+                    if form not in self.forms_list:
+                        self.forms_list.append(form)
+
+        for i in to_pop:
+            self.forms_list.pop(i)
+
         toolbox.tprint(f"Found {len(self.found_headers)} interesting headers, {len(self.found_data)} interesting data and {len(self.forms_list)} forms")
 
         toolbox.tprint(f"Running Fuzzer on {self.target}")
@@ -300,17 +318,7 @@ class Target:
             # with open(f"{self.address}_subdomains.txt","w") as file:
             #     for domain in alives:
             #         file.write(domain+"\n")
-
-    # def search_technology(self):
-    #     """
-    #     enumerate found urls with crawler and fuzzer to search for special headers and technology markers
-    #     """
-        
-    #     toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
-    #     time.sleep(5)
-
-    #     self.found_headers, self.found_data = wu.search_technology(self.all_urls)
-        
+       
     def search_parameters(self):
         """
         try to bruteforce for common POST and GET parameters on web root
@@ -366,11 +374,19 @@ class Target:
         if len(self.url_parameters) == 0:
             toolbox.tprint("No GET parameters found on target, skipping RXSS detection")
 
+        # toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+        # time.sleep(5)
+        toolbox.tprint(f"Testing RXSS on {len(self.url_parameters)} parameters")
+
         for param in self.url_parameters:
-            result = wu.test_reflection(param[0],param[1],"GET")
+            print(param[0])
+            result = vt.test_reflection(param[0],param[1],"GET")
             if result:
                 # todo : test multiples payload depending on reflection context
-                toolbox.vprint(f"Possible XSS on {param[0]}/?{param[1]}=here",level=2)
+                toolbox.vprint(f"Possible RXSS on {param[0]}/?{param[1]}=here",level=2)
+            result = vt.test_dom_reflection(param[0],param[1])
+            if result:
+                toolbox.vprint(f"Possible DOM XSS on {param[0]}/?{param[1]}=here",level=2)
 
     def create_report(self):
         """
