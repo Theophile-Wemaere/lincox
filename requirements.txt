@@ -4,3 +4,4 @@ python-nmap
 requests
 bs4
 termcolor
+selenium

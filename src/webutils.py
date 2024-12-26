@@ -10,6 +10,13 @@ from alive_progress import alive_bar
 import json
 import re
 import random
+import copy
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+import time
 
 
 import warnings
@@ -25,9 +32,10 @@ HEADERS = {
 def get_headers():
 
     # random user agent for FW bypass (work sometimes)
-    HEADERS["User-Agent"] += "." + str(random.getrandbits(24))
+    headers = copy.deepcopy(HEADERS)
+    headers["User-Agent"] += "." + str(random.getrandbits(24))
 
-    return HEADERS
+    return headers
 
 class Crawler:
 
@@ -529,87 +537,76 @@ def search_page_for_form(page:str,url:str)-> list:
     form_data_list = []
 
     for form in forms:
-        if form.has_attr('action'):
-            form_info = {
-                "method": form.get('method', 'get').lower(),
-                "action": form.get('action'),
-                "url": url,
-                "parameters": []
+        form_info = {
+            "method": form.get('method', 'get').lower(),
+            "action": form.get('action'),
+            "url": url,
+            "parameters": []
+        }
+
+        for input_tag in form.find_all('input'):
+            param = {
+                "name": input_tag.get('name'),
+                "type": input_tag.get('type', 'text').lower(),
+                "value": input_tag.get('value')
             }
-
-            for input_tag in form.find_all('input'):
+            if param["name"]:
+                form_info["parameters"].append(param)
+        for textarea_tag in form.find_all('textarea'):
+            param = {
+                "name": textarea_tag.get('name'),
+                "type": "textarea",
+                "value": textarea_tag.text
+            }
+            if param["name"]:
+                form_info["parameters"].append(param)
+        for select_tag in form.find_all('select'):
+            for option_tag in select_tag.find_all('option'):
                 param = {
-                    "name": input_tag.get('name'),
-                    "type": input_tag.get('type', 'text').lower(),
-                    "value": input_tag.get('value')
+                    "name": select_tag.get('name'),
+                    "type": "select",
+                    "value": option_tag.get('value')
                 }
                 if param["name"]:
                     form_info["parameters"].append(param)
-            for textarea_tag in form.find_all('textarea'):
-                param = {
-                    "name": textarea_tag.get('name'),
-                    "type": "textarea",
-                    "value": textarea_tag.text
-                }
-                if param["name"]:
-                    form_info["parameters"].append(param)
-            for select_tag in form.find_all('select'):
-              for option_tag in select_tag.find_all('option'):
-                if option_tag.has_attr('selected'):
-                  param = {
-                      "name": select_tag.get('name'),
-                      "type": "select",
-                      "value": option_tag.get('value')
-                  }
-                  if param["name"]:
-                      form_info["parameters"].append(param)
+                    break
 
-            form_data_list.append(form_info)
+        form_data_list.append(form_info)
 
     return form_data_list
 
-def test_reflection(url:str,param:str,method:str)->str:
+def get_page_source(url):
     """
-    test reflection with a parameter for XSS attack
+    Opens a URL in a Selenium WebDriver, waits for the page to load,
+    and returns the page source.
     """
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless=new')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
 
-    def search_reflection(page:str,payload):
-        """
-        search for payload inside response page
-        """
-        line = ""
-        for c in page:
-            if c == "\n":
-                if line.find(payload) != -1:
-                    return True
-                line = ""
-            else:
-                line += c
-        return False
-
-    payloads = [
-        "lincox><",
-        "lincox\"=",
-    ]
-
-    found = 0
-    best_payload = ""
-
-    for payload in payloads:
-        if method == "GET":
-            r = requests.get(f"{url}/?{param}={payload}",headers=get_headers())
-        elif method == "POST":
-            r = requests.post(f"{url}",data={param:payload},headers=get_headers())
-        if search_reflection(r.text,payload):
-            found += 1
-            best_payload = payload
-
-    if found == 0:
+    try:
+        driver = webdriver.Chrome(options=options)
+        driver.get(url)
+        time.sleep(3)
+        page_source = driver.page_source
+        return page_source
+    except Exception as e:
+        print(f"An error occurred: {e}")
         return None
-    elif found == 1:
-        return best_payload
-    elif found == 2:
-        return "><\"="
+    finally:
+        if 'driver' in locals():
+            driver.quit()
+
+def get_form_w_selenium(url:str)->dict:
+    """
+    load a page with selenium to get form info
+    in case it is generated client side
+    """
+
+    page = get_page_source(url)
+    forms = search_page_for_form(page,url)
+    return forms
 
 # def search_technology(urls:list):
 #     """

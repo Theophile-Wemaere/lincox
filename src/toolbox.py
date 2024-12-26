@@ -31,6 +31,7 @@ def exit_error(msg,code):
     print error message and exit
     """
 
+    print()
     print(get_header("ERROR")+msg)
     exit(code)
 
@@ -53,14 +54,12 @@ def get_header(type:str)->str:
     if type == "ERROR":
         return timestamp_header + ' ' + '['+colored("ERROR","yellow","on_red")+'] '
 
-    if type == "VULN0":
-        return timestamp_header + ' ' + '['+colored("INFO","black","on_blue")+'] '
     if type == "VULN1":
-        return timestamp_header + ' ' + '['+colored("LOW","black","on_yellow")+'] '
+        return timestamp_header + ' ' + '['+colored("LOW","black","on_blue")+'] '
     if type == "VULN2":
-        return timestamp_header + ' ' + '['+colored("MEDIUM","black","on_light_red")+'] '
+        return timestamp_header + ' ' + '['+colored("MEDIUM","black","on_yellow")+'] '
     if type == "VULN3":
-        return timestamp_header + ' ' + '['+colored("HIGH","white","on_red")+'] '
+        return timestamp_header + ' ' + '['+colored("HIGH","black","on_light_red")+'] '
 
 def debug(msg):
     """
@@ -80,12 +79,11 @@ def tprint(*args,start='',end='\n'):
     print(get_header("INFO")+" ".join(map(str, args)),end='')
     print(end,end='')
 
-def vprint(*args,start='',end='\n',level=0):
+def vprint(*args,start='',end='\n',level=1):
     """
     vulnerability print with timestamp and colors
-    level 0 : blue
-    level 1 : yellow
-    level 2 : orange
+    level 1 : blue
+    level 2 : yellow
     level 3 : red 
     """
 
