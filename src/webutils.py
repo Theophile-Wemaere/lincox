@@ -49,9 +49,17 @@ class Crawler:
         self.headers = []
         self.headers2url = []
         self.found_data = []
+        self.found_data_line = []
         self.forms_list = []
+        self.previous_size = 0
 
     def __download_url(self, url):
+
+        # print(f"Trying {url}")
+
+        if self.STOP:
+            return
+
         try:
             r = requests.get(url,allow_redirects=True,headers=get_headers(),verify=False)
             if r.url not in self.all_urls:
@@ -71,7 +79,10 @@ class Crawler:
                 if len(results) > 0:
                     for entry in results:
                         entry["url"] = url
-                        self.found_data.append(entry)
+                        if entry['line'] not in self.found_data_line:
+                            toolbox.debug(f"Found {entry['name']} : {entry['line']}")
+                            self.found_data.append(entry)
+                            self.found_data_line.append(entry['line'])
 
                 # form research
                 self.forms_list += search_page_for_form(r.text,r.url)
@@ -80,6 +91,14 @@ class Crawler:
         except KeyboardInterrupt:
             toolbox.warn(f"Keyboard interrupt detected, skipping Crawler on {self.address}",start='\n')
             self.STOP = True
+        except urllib3.exceptions.ProtocolError:
+            print("sleeping")
+            time.sleep(5)
+            return False
+        except requests.exceptions.ConnectionError:
+            print("sleeping")
+            time.sleep(5)
+            return False
         except Exception as e:
             print("Exception :",url,e)
             return False
@@ -150,8 +169,14 @@ class Crawler:
 
             if self.STOP:
                 return self.all_urls, self.headers2url, self.found_data, self.forms_list
-
-            toolbox.tprint(f"Found {len(self.visited_urls)} urls, got {len(self.urls_to_visit)} to visit",end='\r')
+            
+            msg = f"Found {len(self.visited_urls)} urls, got {len(self.urls_to_visit)} to visit"
+            if self.previous_size-len(msg) > 0:
+                toolbox.tprint(msg+" "*(self.previous_size-len(msg)),end='\r')
+            else:
+                toolbox.tprint(msg,end='\r')
+            
+            self.previous_size = len(msg)
             url = self.urls_to_visit.pop(0)
             try:
                 self.__crawl(url)
@@ -188,6 +213,9 @@ class Fuzzer:
         return lines
 
     def __fetch_url(self,line:str)->str:
+
+        if self.STOP:
+            return
 
         r = None
         if self.method == "GET":
@@ -263,20 +291,23 @@ class ParaMiner:
 
         value = "/etc/passwd"
 
-        r = requests.get(f"{self.url}?{line}={value}",headers=get_headers(),verify=False)
-        if len(r.text) != self.default_size:
-            return r.url,line,r.status_code,len(r.text),"GET",''
-        
-        # else try POST request
-        body = {
-            f"{line}":f"{value}"
-        }
-        r = requests.post(f"{self.url}",data=body,headers=get_headers(),verify=False)
-        if len(r.text) != self.default_size:
-            return self.url,line,r.status_code,len(r.text),"POST",''
-        return False
+        try:
+            r = requests.get(f"{self.url}?{line}={value}",headers=get_headers(),verify=False)
+            if len(r.text) != self.default_size:
+                return r.url,line,r.status_code,len(r.text),"GET",''
+            
+            # else try POST request
+            body = {
+                f"{line}":f"{value}"
+            }
+            r = requests.post(f"{self.url}",data=body,headers=get_headers(),verify=False)
+            if len(r.text) != self.default_size:
+                return self.url,line,r.status_code,len(r.text),"POST",''
+            return False
+        except ConnectionResetError:
+            time.sleep(5)
+            return False
 
-        return False 
 
     def run(self):
 
@@ -286,18 +317,31 @@ class ParaMiner:
         if len(lines) == 0:
             toolbox.exit_error(f"Error, {file_path} seems to be empty",1)
 
-        results = []
-        self.default_size = len(requests.get(f"{self.url}",headers=get_headers(),verify=False).text)
+        ready = False
+        while not ready:
+            try:
 
-        # get default code for unknown parameter
-        self.default_code_get = requests.get(f"{self.url}/?LINCOX=lugi",headers=get_headers(),verify=False).status_code
-        self.default_code_post = requests.post(f"{self.url}",data={"LINCOX":"albert-fish"},headers=get_headers(),verify=False).status_code
+                results = []
+                self.default_size = len(requests.get(f"{self.url}",headers=get_headers(),verify=False).text)
 
-        self.bad_codes = [403,404,405]
-        if self.default_code_get != 200:
-            self.bad_codes.append(self.default_code_get)
-        if self.default_code_post != 200:
-            self.bad_codes.append(self.default_code_post)
+                # get default code for unknown parameter
+                self.default_code_get = requests.get(f"{self.url}/?LINCOX=lugi",headers=get_headers(),verify=False).status_code
+                self.default_code_post = requests.post(f"{self.url}",data={"LINCOX":"albert-fish"},headers=get_headers(),verify=False).status_code
+
+                self.bad_codes = [403,404,405]
+                if self.default_code_get != 200:
+                    self.bad_codes.append(self.default_code_get)
+                if self.default_code_post != 200:
+                    self.bad_codes.append(self.default_code_post)
+
+                ready = True
+
+            except ConnectionResetError:
+                time.sleep(5)
+                return False
+            except requests.exceptions.ConnectionError:
+                time.sleep(5)
+                return False
 
         try:
             with alive_bar(len(lines), title=toolbox.get_header("INFO")+f"Searching parameter in {self.url}", enrich_print=False) as bar:
@@ -507,8 +551,8 @@ def search_page_for_technology(page:str,url:str)->list:
                 })
             line = ""
     
-    for result in results:
-        toolbox.debug(f"Found {result['name']} : {result['line']}")
+    # for result in results:
+    #     toolbox.debug(f"Found {result['name']} : {result['line']}")
 
     return results
 

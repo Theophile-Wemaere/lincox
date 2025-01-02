@@ -79,3 +79,16 @@ def test_dom_reflection(url:str,param:str,type:str)->str:
         return "><\"="
     elif found == 3:
         return f"</{type}><img src='lincox'>"
+
+def test_lfi_linux(url,body,method):
+    """
+    test for LFI in parameters with linux payload
+    """
+
+    # simple test
+
+    # simple directory traversal
+
+    # simple filter evasion
+
+    return None
