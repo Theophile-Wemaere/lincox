@@ -265,7 +265,7 @@ class ParaMiner:
 
         r = requests.get(f"{self.url}?{line}={value}",headers=get_headers(),verify=False)
         if len(r.text) != self.default_size:
-            return r.url,line,r.status_code,len(r.text),"GET"
+            return r.url,line,r.status_code,len(r.text),"GET",''
         
         # else try POST request
         body = {
@@ -273,7 +273,7 @@ class ParaMiner:
         }
         r = requests.post(f"{self.url}",data=body,headers=get_headers(),verify=False)
         if len(r.text) != self.default_size:
-            return self.url,line,r.status_code,len(r.text),"POST"
+            return self.url,line,r.status_code,len(r.text),"POST",''
         return False
 
         return False 
@@ -309,7 +309,7 @@ class ParaMiner:
                         line = future_to_line[future]
                         result = future.result()
                         if result:
-                            url,parameter,code,size,method = result
+                            url,parameter,code,size,method, type = result
                             if code not in self.bad_codes and size != self.default_size:
                                 toolbox.debug(f"Found parameter {parameter} with {method} request")
                                 results.append(result)

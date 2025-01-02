@@ -178,7 +178,8 @@ class Target:
         
         if len(self.ports) > 0:
             toolbox.tprint(f"Open ports found on {self.address} : {",".join([str(port) for port in self.ports])}")
-            toolbox.tprint("Enumerating services with nmap (can take a few minutes)...")
+        
+        toolbox.tprint("Enumerating services with nmap (can take a few minutes)...")
         
         if len(self.ports) == 0 and self.force_scan:
             self.ports = to_scan
@@ -258,8 +259,10 @@ class Target:
                     if form not in self.forms_list:
                         self.forms_list.append(form)
 
+        shift = 0
         for i in to_pop:
-            self.forms_list.pop(i)
+            self.forms_list.pop(i-shift)
+            shift += 1
 
         toolbox.tprint(f"Found {len(self.found_headers)} interesting headers, {len(self.found_data)} interesting data and {len(self.forms_list)} forms")
 
@@ -351,14 +354,14 @@ class Target:
                 parameters = url[0][url[0].find('?')+1:].split('&')
                 for parameter in parameters:
                     parameter = parameter.split('=')[0].split('#')[0] # remove fragment if found
-                    data = [url[0].split('?')[0],parameter,'200','0','GET']
+                    data = [url[0].split('?')[0],parameter,'200','0','GET','']
                     if data not in self.url_parameters:
                         self.url_parameters.append(data)
 
         for form in self.forms_list:
             if form["method"] == "get":
                 for param in form["parameters"]:
-                    data = [form["url"].split('#')[0].split('?')[0],param["name"],'200','0','GET']
+                    data = [form["url"].split('#')[0].split('?')[0],param["name"],'200','0','GET',param["type"]]
                     if data not in self.url_parameters:
                         self.url_parameters.append(data)
 
@@ -376,17 +379,18 @@ class Target:
 
         # toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
         # time.sleep(5)
-        toolbox.tprint(f"Testing RXSS on {len(self.url_parameters)} parameters")
 
-        for param in self.url_parameters:
-            print(param[0])
-            result = vt.test_reflection(param[0],param[1],"GET")
-            if result:
-                # todo : test multiples payload depending on reflection context
-                toolbox.vprint(f"Possible RXSS on {param[0]}/?{param[1]}=here",level=2)
-            result = vt.test_dom_reflection(param[0],param[1])
-            if result:
-                toolbox.vprint(f"Possible DOM XSS on {param[0]}/?{param[1]}=here",level=2)
+        with alive_bar(len(self.url_parameters), title=toolbox.get_header("ATTACK")+f"Testing XSS on {len(self.url_parameters)} parameters", enrich_print=False) as bar:
+            for param in self.url_parameters:
+                result = vt.test_reflection(param[0],param[1],"GET",param[5])
+                if result:
+                    # todo : test multiples payload depending on reflection context
+                    toolbox.vprint(f"Possible RXSS on {param[0]}/?{param[1]}=here",level=2,end='')
+                else:
+                    result = vt.test_dom_reflection(param[0],param[1],param[5])
+                    if result:
+                        toolbox.vprint(f"Possible DOM XSS on {param[0]}/?{param[1]}=here",level=2,end='')
+                bar()
 
     def create_report(self):
         """
