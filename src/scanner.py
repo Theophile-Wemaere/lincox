@@ -8,6 +8,7 @@ import os
 import time
 from datetime import datetime
 from alive_progress import alive_bar
+import json
 
 class Target:
 
@@ -24,6 +25,13 @@ class Target:
         self.found_headers = []
         self.forms_list = []
         self.url_parameters = []
+        self.found_xss = []
+        self.found_fi = []
+        self.found_sqli = []
+        self.found_openredirect = []
+        self.found_ssrf = []
+        self.found_broken_auth = []
+        self.found_misconf = []
 
     def initialize(self):
         """
@@ -206,7 +214,6 @@ class Target:
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
         time.sleep(5)
 
-        toolbox.tprint(f"Running Crawler on {self.target}")
         for service in self.services:
             # print("trying",self.services[service])
             data = self.services[service]
@@ -327,6 +334,9 @@ class Target:
         try to bruteforce for common POST and GET parameters on web root
         """
 
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+        time.sleep(5)
+
         wordlist = "data/burp-parameter-names.txt"
         self.url_parameters = []
 
@@ -371,14 +381,14 @@ class Target:
     def search_xss(self):
         """
         search for reflected XSS in GET parameters
-        todo : search for DOM XSS with selenium
         """
 
         if len(self.url_parameters) == 0:
             toolbox.tprint("No GET parameters found on target, skipping RXSS detection")
+            return
 
-        # toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
-        # time.sleep(5)
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+        time.sleep(5)
 
         with alive_bar(len(self.url_parameters), title=toolbox.get_header("ATTACK")+f"Testing XSS on {len(self.url_parameters)} parameters", enrich_print=False) as bar:
             for param in self.url_parameters:
@@ -386,11 +396,39 @@ class Target:
                 if result:
                     # todo : test multiples payload depending on reflection context
                     toolbox.vprint(f"Possible RXSS on {param[0]}/?{param[1]}=here",level=2,end='')
+                    self.found_xss.append((param[0],param[1],"GET","reflected XSS"))
                 else:
                     result = vt.test_dom_reflection(param[0],param[1],param[5])
                     if result:
                         toolbox.vprint(f"Possible DOM XSS on {param[0]}/?{param[1]}=here",level=2,end='')
+                        self.found_xss.append((param[0],param[1],"GET","DOM XSS"))
                 bar()
+
+    def search_lfi(self):
+        """
+        search for LFI and maybe RFI in the futur
+        for now, only Linux based system (marker is /etc/passwd)
+        """
+
+        if len(self.url_parameters) == 0 and len(self.forms_list) == 0:
+            toolbox.tprint("No parameters found on target, skipping LFI/RFI detection")
+            return
+
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+        time.sleep(5)
+
+        for form in self.forms_list:
+            if len(form['parameters']) == 0:
+                continue
+            
+            body = {}
+            for param in form['parameters'] :
+                body[param['name']] = param['value']
+            vt.test_lfi_linux(form['url'],body,form['method'])
+            # print(json.dumps(body,indent=1))
+            # print(json.dumps(form,indent=1))
+
+        
 
     def create_report(self):
         """
