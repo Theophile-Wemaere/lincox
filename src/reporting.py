@@ -1,3 +1,5 @@
+import html as htmllib
+
 def get_scan_info(attack_mode:str)->tuple:
     """
     return the scan mode and details
@@ -381,7 +383,7 @@ def html_report(self)->str:
           html += f"""
                                   <tr>
                                       <td>{data['name']}</td>
-                                      <td>{data['line']}</td>
+                                      <td>{htmllib.escape(data['line'])}</td>
                                       <td><a href="{data['url']}">{data['url']}</a></td>
                                   </tr>
           """
@@ -429,7 +431,7 @@ def html_report(self)->str:
           html += f"""
                                   <tr>
                                       <td>{data['name']}</td>
-                                      <td>{data['line']}</td>
+                                      <td>{htmllib.escape(data['line'])}</td>
                                       <td><a href="{data['url']}">{data['url']}</a></td>
                                   </tr>
           """
@@ -477,7 +479,7 @@ def html_report(self)->str:
           html += f"""
                                   <tr>
                                       <td>{data['name']}</td>
-                                      <td>{data['line']}</td>
+                                      <td>{htmllib.escape(data['line'])}</td>
                                       <td><a href="{data['url']}">{data['url']}</a></td>
                                   </tr>
           """

@@ -95,22 +95,22 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
         # target.enumerate_web_services()
 
+        # # with open("target.pkl",'wb') as file:
+        # #     pickle.dump(target,file)
+
+        # target.search_parameters()
+
         # with open("target.pkl",'wb') as file:
         #     pickle.dump(target,file)
-
-        # target.search_parameters()
-
-        with open("target.pkl",'wb') as file:
-            pickle.dump(target,file)
         
-        if not ATTACK_MODE:
-            target.create_report()
-            exit(0)
+        # if not ATTACK_MODE:
+        #     target.create_report()
+        #     exit(0)
         
-        target.create_report()
+        # target.create_report()
 
-        # search for reflected XSS and DOM XSS (in GET params)
-        # target.search_xss()
+        # # search for reflected XSS and DOM XSS (in GET params)
+        target.search_xss()
 
         # search local file inclusion (TODO: RFI ?)
         target.search_lfi()
