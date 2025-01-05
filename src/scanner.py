@@ -414,21 +414,32 @@ class Target:
             toolbox.tprint("No parameters found on target, skipping LFI/RFI detection")
             return
 
-        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
-        time.sleep(5)
+        # toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+        # time.sleep(5)
 
+        to_test = []
         for form in self.forms_list:
-            if len(form['parameters']) == 0:
-                continue
-            
-            body = {}
-            for param in form['parameters'] :
-                body[param['name']] = param['value']
-            vt.test_lfi_linux(form['url'],body,form['method'])
-            # print(json.dumps(body,indent=1))
-            # print(json.dumps(form,indent=1))
+            if len(form['parameters']) > 0:
+                body = {}
+                for param in form['parameters'] :
+                    body[param['name']] = param['value']
+                to_test.append((form['url'],[entry for entry in body],form['method'].lower()))
 
-        
+        for param in self.url_parameters:
+            url, parameter = param[0], param[1]
+            data = (url,[parameter],"get")
+            if data not in to_test:
+                to_test.append(data)
+
+        with alive_bar(len(to_test), title=toolbox.get_header("ATTACK")+f"Testing LFI on found forms and parameters", enrich_print=False) as bar:
+            for url,parameters,method in to_test:
+                    # toolbox.debug(f"Testing {url} with method {method}")
+                    result = vt.test_lfi_linux(url,parameters,method)
+                    if result:
+                        toolbox.vprint(f"LFI detected on {url}{result}",level=3,end='')
+                    # print(json.dumps(body,indent=1))
+                    # print(json.dumps(form,indent=1))
+                    bar()
 
     def create_report(self):
         """
