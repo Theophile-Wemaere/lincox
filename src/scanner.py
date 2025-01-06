@@ -9,6 +9,7 @@ import time
 from datetime import datetime
 from alive_progress import alive_bar
 import json
+import shutil
 
 class Target:
 
@@ -32,6 +33,7 @@ class Target:
         self.found_ssrf = []
         self.found_broken_auth = []
         self.found_misconf = []
+        self.params_to_test = []
 
     def initialize(self):
         """
@@ -211,7 +213,7 @@ class Target:
         visited_urls = []
         wordlist = "data/wordlist.txt"
 
-        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
         time.sleep(5)
 
         for service in self.services:
@@ -334,7 +336,7 @@ class Target:
         try to bruteforce for common POST and GET parameters on web root
         """
 
-        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
         time.sleep(5)
 
         wordlist = "data/burp-parameter-names.txt"
@@ -364,19 +366,32 @@ class Target:
                 parameters = url[0][url[0].find('?')+1:].split('&')
                 for parameter in parameters:
                     parameter = parameter.split('=')[0].split('#')[0] # remove fragment if found
-                    data = [url[0].split('?')[0],parameter,'200','0','GET','']
+                    data = [url[0].split('?')[0],parameter,'200','0','GET','','from_url']
                     if data not in self.url_parameters:
                         self.url_parameters.append(data)
 
         for form in self.forms_list:
             if form["method"] == "get":
                 for param in form["parameters"]:
-                    data = [form["url"].split('#')[0].split('?')[0],param["name"],'200','0','GET',param["type"]]
+                    data = [form["url"].split('#')[0].split('?')[0],param["name"],'200','0','GET',param["type"],"from_form"]
                     if data not in self.url_parameters:
                         self.url_parameters.append(data)
 
-        toolbox.tprint(f"Got {len([x for x in self.url_parameters if x[-1] == "GET"])} get parameter to test")
-        toolbox.tprint(f"Got {len([x for x in self.forms_list if x["method"].lower() == "get"])} get forms to test")
+        # toolbox.tprint(f"Got {len([x for x in self.url_parameters if x[-1] == "GET"])} get parameter to test")
+        # toolbox.tprint(f"Got {len([x for x in self.forms_list if x["method"].lower() == "get"])} get forms to test")
+
+        for form in self.forms_list:
+            if len(form['parameters']) > 0:
+                body = {}
+                for param in form['parameters'] :
+                    body[param['name']] = param['value']
+                self.params_to_test.append((form['url'],[entry for entry in body],form['method'].lower()))
+
+        for param in self.url_parameters:
+            url, parameter,origin = param[0], param[1], param[6]
+            data = (url,[parameter],"get")
+            if data not in self.params_to_test and origin != "from_form":
+                self.params_to_test.append(data)
 
     def search_xss(self):
         """
@@ -387,22 +402,26 @@ class Target:
             toolbox.tprint("No GET parameters found on target, skipping RXSS detection")
             return
 
-        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
         time.sleep(5)
 
+        msgs = []
         with alive_bar(len(self.url_parameters), title=toolbox.get_header("ATTACK")+f"Testing XSS on {len(self.url_parameters)} parameters", enrich_print=False) as bar:
             for param in self.url_parameters:
                 result = vt.test_reflection(param[0],param[1],"GET",param[5])
                 if result:
                     # todo : test multiples payload depending on reflection context
-                    toolbox.vprint(f"Possible RXSS on {param[0]}/?{param[1]}=here",level=2,end='')
+                    msgs.append(f"Possible RXSS on {param[0]}/?{param[1]}=here")
                     self.found_xss.append((param[0],param[1],"GET","reflected XSS"))
                 else:
                     result = vt.test_dom_reflection(param[0],param[1],param[5])
                     if result:
-                        toolbox.vprint(f"Possible DOM XSS on {param[0]}/?{param[1]}=here",level=2,end='')
+                        msgs.append(f"Possible DOM XSS on {param[0]}/?{param[1]}=here")
                         self.found_xss.append((param[0],param[1],"GET","DOM XSS"))
                 bar()
+
+        for msg in msgs:
+            toolbox.vprint(msg,level=2)
 
     def search_lfi(self):
         """
@@ -410,36 +429,65 @@ class Target:
         for now, only Linux based system (marker is /etc/passwd)
         """
 
-        if len(self.url_parameters) == 0 and len(self.forms_list) == 0:
+        if len(self.params_to_test) == 0:
             toolbox.tprint("No parameters found on target, skipping LFI/RFI detection")
             return
 
-        # toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...")
-        # time.sleep(5)
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
+        time.sleep(5)
 
-        to_test = []
-        for form in self.forms_list:
-            if len(form['parameters']) > 0:
-                body = {}
-                for param in form['parameters'] :
-                    body[param['name']] = param['value']
-                to_test.append((form['url'],[entry for entry in body],form['method'].lower()))
-
-        for param in self.url_parameters:
-            url, parameter = param[0], param[1]
-            data = (url,[parameter],"get")
-            if data not in to_test:
-                to_test.append(data)
-
-        with alive_bar(len(to_test), title=toolbox.get_header("ATTACK")+f"Testing LFI on found forms and parameters", enrich_print=False) as bar:
-            for url,parameters,method in to_test:
-                    # toolbox.debug(f"Testing {url} with method {method}")
+        msgs = []
+        with alive_bar(len(self.params_to_test), title=toolbox.get_header("ATTACK")+f"Testing LFI on found forms and parameters", enrich_print=False) as bar:
+            for url,parameters,method in self.params_to_test:
                     result = vt.test_lfi_linux(url,parameters,method)
                     if result:
-                        toolbox.vprint(f"LFI detected on {url}{result}",level=3,end='')
-                    # print(json.dumps(body,indent=1))
-                    # print(json.dumps(form,indent=1))
+                        msgs.append(f"LFI detected on {url}{result}")
                     bar()
+
+        for msg in msgs:
+            toolbox.vprint(msg,level=3)
+
+    def search_sqli(self):
+        """
+        search for SQL injection inside found parameters
+        use SQLMAP for maximum efficiency
+        """
+
+        if len(self.params_to_test) == 0:
+            toolbox.tprint("No parameters found on target, skipping LFI/RFI detection")
+            return
+
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
+        time.sleep(5)
+
+        command = ""
+
+        if shutil.which("sqlmap") is None:
+            toolbox.tprint("SQLmap not found in PATH !")
+            if not os.path.exists("tools/sqlmap"):
+                if shutil.which("git") is not None:
+                    toolbox.tprint("Cloning SQLmap repository, please wait")
+                    os.system("git clone https://github.com/sqlmapproject/sqlmap tools/sqlmap")
+                    command = "python3 tools/sqlmap/sqlmap.py"
+                else:
+                    toolbox.warn("git command not found, cannot clone SQLmap locally")
+                    toolbox.warn("Skipping SQL injections detection, please install git or SQLmap")
+        else:
+            command = "sqlmap"
+        
+        msgs = []
+        with alive_bar(len(self.params_to_test), title=toolbox.get_header("ATTACK")+f"Testing SQL injections on found forms and parameters", enrich_print=False) as bar:
+            for url,parameters,method in self.params_to_test:
+                    results = vt.test_sqli(command,url,parameters,method)
+                    if results:
+                        for result in results:
+                            msgs.append(f"SQL injection detected on {url} with parameter {result[2]} : {result[3]}")
+                            self.found_sqli.append(result)
+                    bar()
+
+        for msg in msgs:
+            toolbox.vprint(msg,level=3)
+        
 
     def create_report(self):
         """

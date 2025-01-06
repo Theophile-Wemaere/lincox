@@ -2,6 +2,8 @@ import requests
 from src import toolbox
 from src.webutils import get_headers, get_page_source
 from urllib.parse import quote_plus
+import subprocess
+import re
 
 def search_reflection(page:str,payload):
         """
@@ -102,7 +104,6 @@ def search_lfi_marker(html,os_type):
     
     return False
     
-
 def test_lfi_linux(url,params,method):
     """
     test for LFI in parameters with linux payload
@@ -176,3 +177,66 @@ def test_lfi_linux(url,params,method):
                 return parameters
 
     return None
+
+def test_sqli(command,url,params,method):
+    """
+    use SQL map to search for SQL injection
+    no risk/level tuning for now
+    """
+
+    
+    parameters = ""
+    
+    for param in params:
+        parameters += f"&{param}=lincox"
+    
+    if method.lower() == "get":
+        command = [
+            command,
+            '-u', url+'?'+parameters,
+            '--batch',
+            '--output-dir','sqlmap_output',
+            '--dump-format=csv',
+            '--ignore-code','404'
+        ]
+
+    if method.lower() == "post":
+        command = [
+            command,
+            '-u', url,
+            '--data',parameters,
+            '--batch',
+            '--output-dir','sqlmap_output',
+            '--dump-format=csv',
+            '--ignore-code','404'
+        ]
+    
+    process = subprocess.run(command, capture_output=True, text=True, check=False)
+
+    output = process.stdout
+    # if process.returncode != 0 :
+    #     toolbox.warn(f"sqlmap returned a non zero error code {process.returncode}")
+    #     toolbox.warn(f"sqlmap stderr: {process.stderr}")
+    #     print(output)
+
+    # print(output)
+
+    found_parameters = re.finditer(r"---\n(Parameter:.*)---", output,re.MULTILINE|re.DOTALL|re.IGNORECASE)
+    results = []
+
+    for parameter in found_parameters:
+
+        pattern = r"""
+        \s*Type:\s*(?P<type>.*)\n
+        \s*Title:\s*(?P<title>.*)\n
+        \s*Payload:\s*(?P<payload>.*)\n
+        """
+
+        matches = re.finditer(pattern, parameter.group(), re.VERBOSE)
+        parameter = re.findall(r"Parameter: (.+)", parameter.group())[0]
+
+        for match in matches:
+            toolbox.debug(f"Found injection {match.group('type')} / {match.group('title')} on {parameter} at {url}")
+            results.append((url,method,parameter,match.group("type"),match.group("title"),match.group("payload").strip()))
+    
+    return results if len(results) > 0 else None

@@ -529,7 +529,7 @@ def html_report(self)->str:
                                 <tbody>
         """
 
-        for url,name,response,size,method,type in self.url_parameters:
+        for url,name,response,size,method,type,origin in self.url_parameters:
             html += f"""
                                     <tr>
                                         <td>{name}</td>

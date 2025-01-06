@@ -302,7 +302,7 @@ class ParaMiner:
             }
             r = requests.post(f"{self.url}",data=body,headers=get_headers(),verify=False)
             if len(r.text) != self.default_size:
-                return self.url,line,r.status_code,len(r.text),"POST",''
+                return self.url,line,r.status_code,len(r.text),"POST",'','from_paraminer'
             return False
         except ConnectionResetError:
             time.sleep(5)
