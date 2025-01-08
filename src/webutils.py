@@ -64,7 +64,7 @@ class Crawler:
             r = requests.get(url,allow_redirects=True,headers=get_headers(),verify=False)
             if r.url not in self.all_urls:
                 toolbox.debug(f"Found path {r.url}")
-                self.all_urls.append((r.url,r.status_code))
+                self.all_urls.append((url,r.status_code))
                 self.visited_urls.append(url)
 
                 # data research

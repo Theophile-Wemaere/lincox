@@ -488,6 +488,36 @@ class Target:
         for msg in msgs:
             toolbox.vprint(msg,level=3)
         
+    def search_open_redirect(self):
+        """
+        search for open redirection inside GET parameters
+        """
+
+        if len(self.url_parameters) == 0:
+            toolbox.tprint("No GET parameters found on target, skipping open redirect detection")
+            return
+
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
+        time.sleep(5)
+
+        msgs = []
+        with alive_bar(len(self.url_parameters), title=toolbox.get_header("ATTACK")+f"Searching open redirect in GET parameters", enrich_print=False) as bar:
+            for param in self.url_parameters:
+                result = vt.test_open_redirect(param[0],param[1])
+                if result:
+                    if result == "internal":
+                        msgs.append(f"Possible internal open redirect on {param[0]}?{param[1]}=here")
+                        self.found_openredirect.append((param[0],param[1],"GET","internal open redirect"))
+                    elif result == "external":
+                        msgs.append(f"Possible external open redirect on {param[0]}?{param[1]}=here")
+                        self.found_openredirect.append((param[0],param[1],"GET","external open redirect"))
+                else:
+                    # test with selenium for client side open redirect ?
+                    pass
+                bar()
+
+        for msg in msgs:
+            toolbox.vprint(msg,level=1)
 
     def create_report(self):
         """

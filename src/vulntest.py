@@ -3,6 +3,7 @@ from src import toolbox
 from src.webutils import get_headers, get_page_source
 from urllib.parse import quote_plus
 import subprocess
+from urllib.parse import urlparse
 import re
 
 def search_reflection(page:str,payload):
@@ -240,3 +241,41 @@ def test_sqli(command,url,params,method):
             results.append((url,method,parameter,match.group("type"),match.group("title"),match.group("payload").strip()))
     
     return results if len(results) > 0 else None
+
+def test_open_redirect(url,parameter):
+    """
+    test for open redirect in GET parameter on given url
+    """
+
+    timeout = 5
+
+    test_url = url + '?' + parameter + f"=//google.com/{url}"
+    # toolbox.debug(f"Testing URL: {test_url}")
+    response = requests.get(test_url, allow_redirects=False, timeout=timeout)
+
+    if 300 <= response.status_code < 400:
+        redirect_location = response.headers.get("Location")
+        if redirect_location:
+            toolbox.debug(f"Redirect found: {response.status_code} to {redirect_location}")
+            if is_external_redirect(url, redirect_location):
+                    toolbox.debug(f"Open Redirect Found: {test_url} redirects to external url {redirect_location}")
+                    return "external"
+            else:
+                toolbox.debug(f"Internal Redirect: {test_url} redirects to {redirect_location}")
+                return "internal"
+    elif response.status_code != 200:
+        toolbox.debug(f"Unexpected status code: {response.status_code}")
+
+    return False
+
+def is_external_redirect(original_url, redirect_url):
+    """
+    Check if a redirect is external (to a different domain)
+    """
+    original_domain = urlparse(original_url).netloc
+    redirect_domain = urlparse(redirect_url).netloc
+
+    if not redirect_domain:
+        return False
+
+    return original_domain != redirect_domain
