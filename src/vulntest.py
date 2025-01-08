@@ -30,7 +30,7 @@ def test_reflection(url:str,param:str,method:str,type:str)->str:
     payloads = [
         "lincox><",
         "lincox\"=",
-        f"</{type}><img src='lincox'>"
+        f"</{type}><img src=\"lincox\">"
     ]
 
     found = 0
@@ -48,12 +48,8 @@ def test_reflection(url:str,param:str,method:str,type:str)->str:
 
     if found == 0:
         return None
-    elif found == 1:
+    else:
         return best_payload
-    elif found == 2:
-        return "><\"="
-    elif found == 3:
-        return f"</{type}><img src='lincox'>"
 
 def test_dom_reflection(url:str,param:str,type:str)->str:
     """
@@ -63,28 +59,24 @@ def test_dom_reflection(url:str,param:str,type:str)->str:
     payloads = [
         "lincox><",
         "lincox\"=",
-        f"</{type}><img src='lincox'>"
+        f"</{type}><img src=\"lincox\">"
     ]
 
     found = 0
     best_payload = ""
 
     for payload in payloads:
-        page = get_page_source(f"{url}/?{param}={quote_plus(payload)}")
+        page = get_page_source(f"{url}/?{param}={payload}")
         if search_reflection(page,payload):
             found += 1
             best_payload = payload
 
     if found == 0:
         return None
-    elif found == 1:
+    else:
         return best_payload
-    elif found == 2:
-        return "><\"="
-    elif found == 3:
-        return f"</{type}><img src='lincox'>"
 
-def search_lfi_marker(html,os_type):
+def search_lfi_marker(html:str,os_type:str)->bool:
     """
     search for LFI markers in a web page
     depending on the OS
@@ -105,7 +97,7 @@ def search_lfi_marker(html,os_type):
     
     return False
     
-def test_lfi_linux(url,params,method):
+def test_lfi_linux(url:str,params:list,method:str)->str:
     """
     test for LFI in parameters with linux payload
     """
@@ -179,7 +171,7 @@ def test_lfi_linux(url,params,method):
 
     return None
 
-def test_sqli(command,url,params,method):
+def test_sqli(command:list,url:str,params:list,method:str)->list:
     """
     use SQL map to search for SQL injection
     no risk/level tuning for now
@@ -189,11 +181,10 @@ def test_sqli(command,url,params,method):
     parameters = ""
     
     for param in params:
-        parameters += f"&{param}=lincox"
+        parameters += f"&{param}=lincox@gmail.com"
     
     if method.lower() == "get":
-        command = [
-            command,
+        command += [
             '-u', url+'?'+parameters,
             '--batch',
             '--output-dir','sqlmap_output',
@@ -202,8 +193,7 @@ def test_sqli(command,url,params,method):
         ]
 
     if method.lower() == "post":
-        command = [
-            command,
+        command += [
             '-u', url,
             '--data',parameters,
             '--batch',
@@ -242,7 +232,7 @@ def test_sqli(command,url,params,method):
     
     return results if len(results) > 0 else None
 
-def test_open_redirect(url,parameter):
+def test_open_redirect(url:str,parameter:str)->str:
     """
     test for open redirect in GET parameter on given url
     """
@@ -268,7 +258,7 @@ def test_open_redirect(url,parameter):
 
     return False
 
-def is_external_redirect(original_url, redirect_url):
+def is_external_redirect(original_url:str, redirect_url:str)->bool:
     """
     Check if a redirect is external (to a different domain)
     """

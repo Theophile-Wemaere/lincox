@@ -215,6 +215,7 @@ class Target:
 
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
         time.sleep(5)
+        print(' '*72,end='\r')
 
         for service in self.services:
             # print("trying",self.services[service])
@@ -338,6 +339,7 @@ class Target:
 
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
         time.sleep(5)
+        print(' '*72,end='\r')
 
         wordlist = "data/burp-parameter-names.txt"
         self.url_parameters = []
@@ -404,6 +406,7 @@ class Target:
 
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
         time.sleep(5)
+        print(' '*72,end='\r')
 
         msgs = []
         with alive_bar(len(self.url_parameters), title=toolbox.get_header("ATTACK")+f"Testing XSS on {len(self.url_parameters)} parameters", enrich_print=False) as bar:
@@ -435,6 +438,7 @@ class Target:
 
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
         time.sleep(5)
+        print(' '*72,end='\r')
 
         msgs = []
         with alive_bar(len(self.params_to_test), title=toolbox.get_header("ATTACK")+f"Testing LFI on found forms and parameters", enrich_print=False) as bar:
@@ -459,6 +463,7 @@ class Target:
 
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
         time.sleep(5)
+        print(' '*72,end='\r')
 
         command = ""
 
@@ -468,12 +473,15 @@ class Target:
                 if shutil.which("git") is not None:
                     toolbox.tprint("Cloning SQLmap repository, please wait")
                     os.system("git clone https://github.com/sqlmapproject/sqlmap tools/sqlmap")
-                    command = "python3 tools/sqlmap/sqlmap.py"
+                    command = ["python3","tools/sqlmap/sqlmap.py"]
                 else:
                     toolbox.warn("git command not found, cannot clone SQLmap locally")
                     toolbox.warn("Skipping SQL injections detection, please install git or SQLmap")
+            else:
+                command = ["python3","tools/sqlmap/sqlmap.py"]
+                toolbox.tprint("Using local tools/sqlmap repo")
         else:
-            command = "sqlmap"
+            command = ["sqlmap"]
         
         msgs = []
         with alive_bar(len(self.params_to_test), title=toolbox.get_header("ATTACK")+f"Testing SQL injections on found forms and parameters", enrich_print=False) as bar:
@@ -499,6 +507,7 @@ class Target:
 
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
         time.sleep(5)
+        print(' '*72,end='\r')
 
         msgs = []
         with alive_bar(len(self.url_parameters), title=toolbox.get_header("ATTACK")+f"Searching open redirect in GET parameters", enrich_print=False) as bar:
@@ -518,6 +527,41 @@ class Target:
 
         for msg in msgs:
             toolbox.vprint(msg,level=1)
+
+    def auth_attack(self):
+        """
+        test for default creds/small bruteforce is login detected
+        """
+
+        if len(self.forms_list) == 0:
+            toolbox.tprint("No forms found on target, skipping authentication attack")
+
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
+        time.sleep(5)
+        print(' '*72,end='\r')
+
+        msgs = []
+        forms_to_test = []
+        for form in self.forms_list:
+            is_login = False
+            # print(json.dumps(form,indent=1))
+            for param in form['parameters']:
+                param = param['name'].lower()
+                if param.find('password') != -1 or param.find('username') != -1 or param.find('email') != -1 or param.find('passwd') != -1:
+                    is_login= True
+            if is_login:
+                forms_to_test.append(form)
+        
+        with alive_bar(len(forms_to_test), title=toolbox.get_header("ATTACK")+f"Trying default creds and bruteforce on login forms", enrich_print=False) as bar:
+            for form in forms_to_test:
+                result = vt.test_default_credentials()
+                if result:
+                    print(result)
+                else:
+                    result = vt.bruteforce_form()
+                    if result:
+                        print(result)
+
 
     def create_report(self):
         """

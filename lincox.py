@@ -113,29 +113,28 @@ Default : 80,443,8000,8080,8081,8443\n """)
         
         # target.create_report()
 
-        # # # search for reflected XSS and DOM XSS (in GET params)
-        # # target.search_xss()
+        # # search for reflected XSS and DOM XSS (in GET params)
+        # target.search_xss()
 
-        # # # search local file inclusion (TODO: RFI ?)
-        # # target.search_lfi()
+        # # search local file inclusion (TODO: RFI ?)
+        # target.search_lfi()
 
-        # # # search SQL injection (integrate SQLmap)
-        # # target.search_sqli()
+        # # search SQL injection (integrate SQLmap)
+        # target.search_sqli()
 
-        # search open redirect (in GET params)
-        target.search_open_redirect()
-
+        # # search open redirect (in GET params)
+        # target.search_open_redirect()
         
         # search default creds / small bruteforce if login detected
-        # target.auth_attack()
+        target.auth_attack()
 
-        # search SSRF (ngrok integration ?)
+        # # search SSRF (ngrok integration ?)
         # target.search_ssrf()
 
-        # search misconfigurations : headers, rate limiting, versions... (optional)
+        # # search misconfigurations : headers, rate limiting, versions... (optional)
         # target.search_misconfiguration()
 
-        # WPscan integration ?
+        # # WPscan integration ?
         # target.wp_scan()
 
         target.create_report()
