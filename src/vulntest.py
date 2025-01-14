@@ -5,6 +5,9 @@ from urllib.parse import quote_plus
 import subprocess
 from urllib.parse import urlparse
 import re
+from alive_progress import alive_bar
+
+import time
 
 def search_reflection(page:str,payload):
         """
@@ -269,3 +272,85 @@ def is_external_redirect(original_url:str, redirect_url:str)->bool:
         return False
 
     return original_domain != redirect_domain
+
+def test_default_credentials(form:dict)->dict:
+    """
+    test for most used credentials:
+    """
+
+    counter = 0
+    is_first = True
+    default_size = 0
+
+    with open("data/default-passwords.csv") as wordlist:
+        for line in wordlist:
+            counter += 1
+
+    # wordlist format : Vendor,Username,Password,Comments
+    with open("data/default-passwords.csv") as wordlist:
+        with alive_bar(counter, title=toolbox.get_header("ATTACK")+f"Trying default credentials on {form['url']}", enrich_print=False) as bar:
+            for line in wordlist:
+                line = line.replace('\n','').split(',')
+                username, password = line[1],line[2]
+                if form['method'].lower() == 'get':
+                    parameters = "?"
+                    for param in form['parameters']:
+                    
+                        if param['name'].find('user') != -1 or param['name'].find('email') != -1:
+                            if param['value'] == '' or param['value'] == None:
+                                parameters += f"&{param['name']}={username}"
+                            else:
+                                parameters += f"&{param['name']}={param['value']}"
+                        if param['name'].find('password') != -1 or param['name'].find('passwd') != -1:
+                            parameters += f"&{param['name']}={password}"
+
+                    if is_first:
+                        is_first = False
+                        def_parameters = "?"
+                        for param in form['parameters']:
+                            if param['value'] == '' or param['value'] == None:
+                                def_parameters += f"&{param['name']}=lincox@gmail.com"
+                            else:
+                                def_parameters += f"&{param['name']}={param['value']}"
+                        r = requests.get(form['url']+def_parameters,headers=get_headers())
+                        default_size = len(r.text.split(' '))
+                    
+                    r = requests.get(form['url']+parameters,headers=get_headers())
+                    if len(r.text.split(' ')) != default_size:
+                        print("Possible valid cred :",username,password)
+
+                if form['method'].lower() == 'post':
+                    parameters = {}
+                    for param in form['parameters']:
+                    
+                        if param['name'].find('user') != -1 or param['name'].find('email') != -1:
+                            if param['value'] == '' or param['value'] == None:
+                                parameters[param['name']] = username
+                            else:
+                                parameters[param['name']] = param['value']
+                        if param['name'].find('password') != -1 or param['name'].find('passwd') != -1:
+                            parameters[param['name']] = password
+                        
+                    if is_first:
+                        is_first = False
+                        def_parameters = {}
+                        for param in form['parameters']:
+                            if param['value'] == '' or param['value'] == None:
+                                def_parameters[param['name']] = "lincox@gmail.com"
+                            else:
+                                def_parameters[param['name']] = param['value']
+                        r = requests.post(form['url'],data=def_parameters,headers=get_headers())
+                        default_size = len(r.text.split(' '))
+
+                    r = requests.post(form['url'],data=parameters,headers=get_headers())
+                    if len(r.text.split(' ')) != default_size:
+                        print("Possible valid cred :",username,password)
+
+                bar()
+
+def bruteforce_form(form:dict)->dict:
+    """
+    bruteforce form with wordlists of passwords and users
+    """
+
+    pass

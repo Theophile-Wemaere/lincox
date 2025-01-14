@@ -544,23 +544,26 @@ class Target:
         forms_to_test = []
         for form in self.forms_list:
             is_login = False
-            # print(json.dumps(form,indent=1))
             for param in form['parameters']:
                 param = param['name'].lower()
-                if param.find('password') != -1 or param.find('username') != -1 or param.find('email') != -1 or param.find('passwd') != -1:
+                if param.find('password') != -1 or param.find('user') != -1 or param.find('email') != -1 or param.find('passwd') != -1:
                     is_login= True
             if is_login:
                 forms_to_test.append(form)
+
+        print(len(forms_to_test))
+        print(json.dumps(forms_to_test,indent=1))
         
-        with alive_bar(len(forms_to_test), title=toolbox.get_header("ATTACK")+f"Trying default creds and bruteforce on login forms", enrich_print=False) as bar:
-            for form in forms_to_test:
-                result = vt.test_default_credentials()
+        # with alive_bar(len(forms_to_test), title=toolbox.get_header("ATTACK")+f"Trying default creds and bruteforce on login forms", enrich_print=False) as bar:
+        for form in forms_to_test:
+            result = vt.test_default_credentials(form)
+            if result:
+                print(result)
+            else:
+                result = vt.bruteforce_form(form)
                 if result:
                     print(result)
-                else:
-                    result = vt.bruteforce_form()
-                    if result:
-                        print(result)
+            #    bar()
 
 
     def create_report(self):
