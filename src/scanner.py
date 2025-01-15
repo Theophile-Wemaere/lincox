@@ -10,6 +10,7 @@ from datetime import datetime
 from alive_progress import alive_bar
 import json
 import shutil
+from termcolor import colored
 
 class Target:
 
@@ -269,6 +270,22 @@ class Target:
                     if form not in self.forms_list:
                         self.forms_list.append(form)
 
+        # filter duplicates
+        existing_forms = []
+        for i in range(len(self.forms_list)):
+            form = self.forms_list[i]
+            params = []
+            for param in form['parameters']:
+                params += [param['name']]
+            
+            id_form = form['url']+form['method']+",".join(params)
+            if id_form not in existing_forms:
+                existing_forms.append(id_form)
+            else:
+                to_pop += [i]
+
+        to_pop = list(set(to_pop))
+
         shift = 0
         for i in to_pop:
             self.forms_list.pop(i-shift)
@@ -400,6 +417,8 @@ class Target:
         search for reflected XSS in GET parameters
         """
 
+        print()
+
         if len(self.url_parameters) == 0:
             toolbox.tprint("No GET parameters found on target, skipping RXSS detection")
             return
@@ -432,6 +451,8 @@ class Target:
         for now, only Linux based system (marker is /etc/passwd)
         """
 
+        print()
+
         if len(self.params_to_test) == 0:
             toolbox.tprint("No parameters found on target, skipping LFI/RFI detection")
             return
@@ -456,6 +477,8 @@ class Target:
         search for SQL injection inside found parameters
         use SQLMAP for maximum efficiency
         """
+
+        print()
 
         if len(self.params_to_test) == 0:
             toolbox.tprint("No parameters found on target, skipping LFI/RFI detection")
@@ -501,6 +524,8 @@ class Target:
         search for open redirection inside GET parameters
         """
 
+        print()
+
         if len(self.url_parameters) == 0:
             toolbox.tprint("No GET parameters found on target, skipping open redirect detection")
             return
@@ -533,13 +558,15 @@ class Target:
         test for default creds/small bruteforce is login detected
         """
 
+        print()
+
         forms_to_test = []
         for form in self.forms_list:
             is_login = False
             for param in form['parameters']:
                 param = param['name'].lower()
                 if param.find('password') != -1 or param.find('user') != -1 or param.find('email') != -1 or param.find('passwd') != -1:
-                    if form['url'].find('4280/setup.php') == -1: # block setup URL from DVWA to avoid errors
+                    if form['url'].find('4280/setup.php') == -1 and form['url'].find('4280/vulnerabilities/captcha')  : # block setup and captcha URL from DVWA to avoid errors
                         is_login= True
             if is_login:
                 forms_to_test.append(form)
@@ -555,7 +582,7 @@ class Target:
             result = vt.test_default_credentials(form)
             if result:
                 for username,password in result:
-                    toolbox.vprint(f"Possible valid credential for {form['url']} :\n\t- username : {username}\n\t- password : {password}",level=3)
+                    toolbox.vprint(f"Possible valid credential : {colored(username,"green",attrs=["bold"])} : {colored(password,"green",attrs=["bold"])}",level=3)
             else:
                 result = vt.bruteforce_form(form)
                 if result:

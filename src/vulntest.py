@@ -295,7 +295,7 @@ def test_default_credentials(form:dict)->dict:
 
     credentials_list = list(set(credentials_list))
 
-    with alive_bar(len(credentials_list), title=toolbox.get_header("ATTACK")+f"Trying default credentials on {form['url']}", enrich_print=False) as bar:
+    with alive_bar(len(credentials_list), title=toolbox.get_header("ATTACK")+f"Trying default credentials on {form['url']}", bar=None, enrich_print=False) as bar:
         for username,password in credentials_list:
             if form['method'].lower() == 'get':
                 parameters = "?"
