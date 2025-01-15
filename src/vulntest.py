@@ -282,71 +282,85 @@ def test_default_credentials(form:dict)->dict:
     is_first = True
     default_size = 0
 
-    with open("data/default-passwords.csv") as wordlist:
-        for line in wordlist:
-            counter += 1
+    credentials_list = []
+    valid = []
 
     # wordlist format : Vendor,Username,Password,Comments
     with open("data/default-passwords.csv") as wordlist:
-        with alive_bar(counter, title=toolbox.get_header("ATTACK")+f"Trying default credentials on {form['url']}", enrich_print=False) as bar:
-            for line in wordlist:
-                line = line.replace('\n','').split(',')
-                username, password = line[1],line[2]
-                if form['method'].lower() == 'get':
-                    parameters = "?"
+        for line in wordlist:
+            line = line.replace('\n','').split(',')
+            username, password = line[1],line[2]
+            if (username,password) not in credentials_list:
+                credentials_list.append((username,password))
+
+    credentials_list = list(set(credentials_list))
+
+    with alive_bar(len(credentials_list), title=toolbox.get_header("ATTACK")+f"Trying default credentials on {form['url']}", enrich_print=False) as bar:
+        for username,password in credentials_list:
+            if form['method'].lower() == 'get':
+                parameters = "?"
+                for param in form['parameters']:
+                
+                    if param['name'].find('user') != -1 or param['name'].find('email') != -1:
+                        parameters += f"&{param['name']}={quote_plus(username)}"
+                    elif param['name'].find('password') != -1 or param['name'].find('passwd') != -1:
+                        parameters += f"&{param['name']}={quote_plus(password)}"
+                    else:
+                        if param['value'] == '' or param['value'] == None:
+                            parameters += f"&{param['name']}=lincox"
+                        else:
+                            parameters += f"&{param['name']}={param['value']}"
+
+                if is_first:
+                    is_first = False
+                    def_parameters = "?"
                     for param in form['parameters']:
-                    
-                        if param['name'].find('user') != -1 or param['name'].find('email') != -1:
-                            if param['value'] == '' or param['value'] == None:
-                                parameters += f"&{param['name']}={username}"
-                            else:
-                                parameters += f"&{param['name']}={param['value']}"
-                        if param['name'].find('password') != -1 or param['name'].find('passwd') != -1:
-                            parameters += f"&{param['name']}={password}"
+                        if param['value'] == '' or param['value'] == None:
+                            def_parameters += f"&{param['name']}=lincox@gmail.com"
+                        else:
+                            def_parameters += f"&{param['name']}={param['value']}"
+                    r = requests.get(form['url']+def_parameters,headers=get_headers())
+                    default_size = len(r.text.split(' '))
+                
+                r = requests.get(form['url']+parameters,headers=get_headers())
+                if len(r.text.split(' ')) != default_size:
+                    valid.append((username,password))
 
-                    if is_first:
-                        is_first = False
-                        def_parameters = "?"
-                        for param in form['parameters']:
-                            if param['value'] == '' or param['value'] == None:
-                                def_parameters += f"&{param['name']}=lincox@gmail.com"
-                            else:
-                                def_parameters += f"&{param['name']}={param['value']}"
-                        r = requests.get(form['url']+def_parameters,headers=get_headers())
-                        default_size = len(r.text.split(' '))
+            if form['method'].lower() == 'post':
+                parameters = {}
+                for param in form['parameters']:
+                
+                    if param['name'].find('user') != -1 or param['name'].find('email') != -1:
+                        parameters[param['name']] = username
+                    elif param['name'].find('password') != -1 or param['name'].find('passwd') != -1:
+                        parameters[param['name']] = password
+                    else:
+                        if param['value'] == '' or param['value'] == None:
+                            parameters[param['name']] = "lincox"
+                        else:
+                            parameters[param['name']] = param['value']
                     
-                    r = requests.get(form['url']+parameters,headers=get_headers())
-                    if len(r.text.split(' ')) != default_size:
-                        print("Possible valid cred :",username,password)
-
-                if form['method'].lower() == 'post':
-                    parameters = {}
+                if is_first:
+                    is_first = False
+                    def_parameters = {}
                     for param in form['parameters']:
-                    
-                        if param['name'].find('user') != -1 or param['name'].find('email') != -1:
-                            if param['value'] == '' or param['value'] == None:
-                                parameters[param['name']] = username
-                            else:
-                                parameters[param['name']] = param['value']
-                        if param['name'].find('password') != -1 or param['name'].find('passwd') != -1:
-                            parameters[param['name']] = password
-                        
-                    if is_first:
-                        is_first = False
-                        def_parameters = {}
-                        for param in form['parameters']:
-                            if param['value'] == '' or param['value'] == None:
-                                def_parameters[param['name']] = "lincox@gmail.com"
-                            else:
-                                def_parameters[param['name']] = param['value']
-                        r = requests.post(form['url'],data=def_parameters,headers=get_headers())
-                        default_size = len(r.text.split(' '))
+                        if param['value'] == '' or param['value'] == None:
+                            def_parameters[param['name']] = "lincox@gmail.com"
+                        else:
+                            def_parameters[param['name']] = param['value']
+                    r = requests.post(form['url'],data=def_parameters,headers=get_headers())
+                    default_size = len(r.text.split(' '))
 
-                    r = requests.post(form['url'],data=parameters,headers=get_headers())
-                    if len(r.text.split(' ')) != default_size:
-                        print("Possible valid cred :",username,password)
+                r = requests.post(form['url'],data=parameters,headers=get_headers())
+                if len(r.text.split(' ')) != default_size:
+                    valid.append((username,password))
 
-                bar()
+            bar()
+    
+    if len(valid) > 0:
+        return valid
+    else:
+        return None
 
 def bruteforce_form(form:dict)->dict:
     """

@@ -533,37 +533,34 @@ class Target:
         test for default creds/small bruteforce is login detected
         """
 
-        if len(self.forms_list) == 0:
-            toolbox.tprint("No forms found on target, skipping authentication attack")
-
-        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
-        time.sleep(5)
-        print(' '*72,end='\r')
-
-        msgs = []
         forms_to_test = []
         for form in self.forms_list:
             is_login = False
             for param in form['parameters']:
                 param = param['name'].lower()
                 if param.find('password') != -1 or param.find('user') != -1 or param.find('email') != -1 or param.find('passwd') != -1:
-                    is_login= True
+                    if form['url'].find('4280/setup.php') == -1: # block setup URL from DVWA to avoid errors
+                        is_login= True
             if is_login:
                 forms_to_test.append(form)
 
-        print(len(forms_to_test))
-        print(json.dumps(forms_to_test,indent=1))
+        if len(forms_to_test) == 0:
+            toolbox.tprint("No login forms found on target, skipping authentication attack")
+
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
+        time.sleep(5)
+        print(' '*72,end='\r')
         
-        # with alive_bar(len(forms_to_test), title=toolbox.get_header("ATTACK")+f"Trying default creds and bruteforce on login forms", enrich_print=False) as bar:
         for form in forms_to_test:
             result = vt.test_default_credentials(form)
             if result:
-                print(result)
+                for username,password in result:
+                    toolbox.vprint(f"Possible valid credential for {form['url']} :\n\t- username : {username}\n\t- password : {password}",level=3)
             else:
                 result = vt.bruteforce_form(form)
                 if result:
                     print(result)
-            #    bar()
+
 
 
     def create_report(self):
