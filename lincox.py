@@ -101,8 +101,15 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
             if SUBDOMAINS_ENUM:
                 target.enumerate_subdomains()
+                target.create_report()
+                exit(0)
 
             target.search_services()
+
+            target.enumerate_web_services()
+
+            target.search_parameters()
+
             with open("target.pkl",'wb') as file:
                 pickle.dump(target,file)
         else:
@@ -110,10 +117,6 @@ Default : 80,443,8000,8080,8081,8443\n """)
                 target = pickle.load(file)
 
         # TODO : optional add other services enumeration, CPE fetching and CVE fetching with online API
-
-        target.enumerate_web_services()
-
-        target.search_parameters()
         
         if not ATTACK_MODE:
             target.create_report()

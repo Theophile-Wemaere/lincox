@@ -35,6 +35,7 @@ class Target:
         self.found_broken_auth = []
         self.found_misconf = []
         self.params_to_test = []
+        self.services = []
 
     def initialize(self):
         """
@@ -291,10 +292,11 @@ class Target:
             self.forms_list.pop(i-shift)
             shift += 1
 
-        with open("forms.json","w") as file:
-            json.dump(self.forms_list,file)
-
         toolbox.tprint(f"Found {len(self.found_headers)} interesting headers, {len(self.found_data)} interesting data and {len(self.forms_list)} forms")
+
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
+        time.sleep(5)
+        print(' '*72,end='\r')
 
         toolbox.tprint(f"Running Fuzzer on {self.target}")
         for service in self.services:
@@ -435,14 +437,15 @@ class Target:
             for param in self.url_parameters:
                 result = vt.test_reflection(param[0],param[1],"GET",param[5])
                 if result:
-                    # todo : test multiples payload depending on reflection context
-                    msgs.append(f"Possible RXSS on {param[0]}/?{param[1]}=here")
-                    self.found_xss.append((param[0],param[1],"GET","reflected XSS"))
+                    payload, confidence_level = result
+                    msgs.append(f"Possible reflected XSS ({confidence_level} confidence) on {param[0]}?{param[1]}={payload}")
+                    self.found_xss.append((param[0],param[1],"GET","reflected XSS",confidence_level))
                 else:
                     result = vt.test_dom_reflection(param[0],param[1],param[5])
                     if result:
-                        msgs.append(f"Possible DOM XSS on {param[0]}/?{param[1]}=here")
-                        self.found_xss.append((param[0],param[1],"GET","DOM XSS"))
+                        payload, confidence_level = result
+                        msgs.append(f"Possible DOM XSS ({confidence_level} confidence) on {param[0]}?{param[1]}={payload}")
+                        self.found_xss.append((param[0],param[1],"GET","DOM XSS",confidence_level))
                 bar()
 
         for msg in msgs:

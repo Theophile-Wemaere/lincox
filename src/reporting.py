@@ -103,102 +103,103 @@ def html_report(self)->str:
     #endregion
 
     #region services detected
-    html += """
-      <br>
-      <!-- Detected Services Section -->
-      <section>
-        <h2 class="h4">Detected Services</h2>
-        <table class="table table-bordered table-striped">
-                <thead class="table-dark">
-                <tr>
-                    <th>Port</th>
-                    <th>Name</th>
-                    <th>Product</th>
-                    <th>Version</th>
-                    <th>CPE</th>
-                    <th>Address</th>
-                </tr>
-                </thead>
-                <tbody>"""
+    if len(self.services) > 0:
+        html += """
+        <br>
+        <!-- Detected Services Section -->
+        <section>
+            <h2 class="h4">Detected Services</h2>
+            <table class="table table-bordered table-striped">
+                    <thead class="table-dark">
+                    <tr>
+                        <th>Port</th>
+                        <th>Name</th>
+                        <th>Product</th>
+                        <th>Version</th>
+                        <th>CPE</th>
+                        <th>Address</th>
+                    </tr>
+                    </thead>
+                    <tbody>"""
 
-    for service in self.services:
-        data = self.services[service]
-        service_info = f"{data["name"]}/{data["product"]}"
-        
-        if data["product"] == '':
-            service_info = data["name"]
+        for service in self.services:
+            data = self.services[service]
+            service_info = f"{data["name"]}/{data["product"]}"
+            
+            if data["product"] == '':
+                service_info = data["name"]
 
-        if data["name"] == '':
-            service_info = data["product"]
+            if data["name"] == '':
+                service_info = data["product"]
 
-        if data["product"] == '' and data["name"] == '':
-            service_info = "unknown"
+            if data["product"] == '' and data["name"] == '':
+                service_info = "unknown"
 
-        html += f"""
-        <tr>
-              <td>{service}</td>
-              <td>{data["name"] if data["name"] != '' else "unknown"}</td>
-              <td>{data["product"] if data["product"] != '' else ""}</td>
-              <td>{data["version"] if data["version"] != '' else ""}</td>
-              <td>{data["cpe"] if data["cpe"] != '' else ""}</td>
-              <td>{self.address}</td>
-        </tr>
-        """
+            html += f"""
+            <tr>
+                <td>{service}</td>
+                <td>{data["name"] if data["name"] != '' else "unknown"}</td>
+                <td>{data["product"] if data["product"] != '' else ""}</td>
+                <td>{data["version"] if data["version"] != '' else ""}</td>
+                <td>{data["cpe"] if data["cpe"] != '' else ""}</td>
+                <td>{self.address}</td>
+            </tr>
+            """
 
-    html += """
-            </tbody>
-        </table>
-      </section>"""
+        html += """
+                </tbody>
+            </table>
+        </section>"""
 
     #endregion
 
     #region domains
     
     if hasattr(self, "domains"):
-      html += f"""
-      <!-- Detected Domains Section -->
-      <section class="table-container">
-          <h2 class="h4 mt-4">Detected Domains</h2>
+        html += f"""
+        <!-- Detected Domains Section -->
+        <section class="table-container">
+            <h2 class="h4 mt-4">Detected Domains</h2>
 
-          <div class="accordion">
-              <div class="accordion-item">
-                  <h2 class="accordion-header">
-                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                          data-bs-target="#collapseDomains" aria-expanded="false" aria-controls="collapseDomains">
-                          View Detected Domains ({len(self.domains)})
-                      </button>
-                  </h2>
-                  <div id="collapseDomains" class="accordion-collapse collapse" aria-labelledby="headingDomains" 
-                      data-bs-parent="#domainsAccordion">
-                      <div class="accordion-body">
-                          <table class="table table-bordered table-striped">
-                              <thead class="table-dark">
-                                  <tr>
-                                      <th>Domains</th>
-                                      <!-- <th>IP Address</th> -->
-                                      <th>Status</th>
-                                  </tr>
-                              </thead>
-                              <tbody>
-      """
+            <div class="accordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                            data-bs-target="#collapseDomains" aria-expanded="false" aria-controls="collapseDomains">
+                            View Detected Domains ({len(self.domains)})
+                        </button>
+                    </h2>
+                    <div id="collapseDomains" class="accordion-collapse collapse" aria-labelledby="headingDomains" 
+                        data-bs-parent="#domainsAccordion">
+                        <div class="accordion-body">
+                            <table class="table table-bordered table-striped">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Domains</th>
+                                        <!-- <th>IP Address</th> -->
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+        """
 
-      for finding, status in self.domains:
-          html += f"""
-                                  <tr>
-                                      <td><a href="http://{finding}">{finding}</a></td>
-                                      <td>{status}</td>
-                                  </tr>
-          """
+        for finding, status in self.domains:
+            html += f"""
+                                    <tr>
+                                        <td><a href="http://{finding}">{finding}</a></td>
+                                        <td>{status}</td>
+                                    </tr>
+            """
 
-      html += """
-                              </tbody>
-                          </table>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      </section>
-      """
+        html += """
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        """
     #endregion
     
     #region Crawled URLs
@@ -346,154 +347,155 @@ def html_report(self)->str:
     #endregion
 
     #region Found Data
-    html += """
-    <!-- Detected Data Section -->
-    <section class="table-container">
-        <h2 class="h4 mt-4">Interesting Data on Technologies used and/or credentials</h2>"""
+    if len(self.found_data) > 0:
+        html += """
+        <!-- Detected Data Section -->
+        <section class="table-container">
+            <h2 class="h4 mt-4">Interesting Data on Technologies used and/or credentials</h2>"""
 
-    #region CMS
-    if len([x for x in self.found_data if x['type'] == 'CMS']) > 0:
-      section = "collapseCMSFoundData"
-      html += f"""
-            <div class="accordion">
-              <div class="accordion-item">
-                  <h2 class="accordion-header">
-                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                          data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
-                          View Detected CMS ({len([x for x in self.found_data if x['type'] == 'CMS'])})
-                      </button>
-                  </h2>
-                  <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
-                      data-bs-parent="#urlsAccordion">
-                      <div class="accordion-body">
-                          <table class="table table-bordered table-striped">
-                              <thead class="table-dark">
-                                  <tr>
-                                      <th>Type</th>
-                                      <th>HTML line</th>
-                                      <th>URL</th>
-                                  </tr>
-                              </thead>
-                              <tbody>
-      """
+        #region CMS
+        if len([x for x in self.found_data if x['type'] == 'CMS']) > 0:
+            section = "collapseCMSFoundData"
+            html += f"""
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
+                                View Detected CMS ({len([x for x in self.found_data if x['type'] == 'CMS'])})
+                            </button>
+                        </h2>
+                        <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                            data-bs-parent="#urlsAccordion">
+                            <div class="accordion-body">
+                                <table class="table table-bordered table-striped">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>HTML line</th>
+                                            <th>URL</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+            """
 
-      for data in self.found_data:
-          if data['type'] != "CMS":
-            continue
-          html += f"""
-                                  <tr>
-                                      <td>{data['name']}</td>
-                                      <td>{htmllib.escape(data['line'])}</td>
-                                      <td><a href="{data['url']}">{data['url']}</a></td>
-                                  </tr>
-          """
+        for data in self.found_data:
+            if data['type'] != "CMS":
+                continue
+            html += f"""
+                                    <tr>
+                                        <td>{data['name']}</td>
+                                        <td>{htmllib.escape(data['line'])}</td>
+                                        <td><a href="{data['url']}">{data['url']}</a></td>
+                                    </tr>
+            """
 
-      html += """
-                              </tbody>
-                          </table>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      </section>
-    """
+        html += """
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        """
     #endregion
 
-    #region Credentials
-    if len([x for x in self.found_data if x['type'] == 'credential']) > 0:
-      section = "collapseCredentialsFoundData"
-      html += f"""
-            <div class="accordion">
-              <div class="accordion-item">
-                  <h2 class="accordion-header">
-                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                          data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
-                          View Detected Credentials ({len([x for x in self.found_data if x['type'] == 'credential'])})
-                      </button>
-                  </h2>
-                  <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
-                      data-bs-parent="#urlsAccordion">
-                      <div class="accordion-body">
-                          <table class="table table-bordered table-striped">
-                              <thead class="table-dark">
-                                  <tr>
-                                      <th>Type</th>
-                                      <th>HTML line</th>
-                                      <th>URL</th>
-                                  </tr>
-                              </thead>
-                              <tbody>
-      """
+        #region Credentials
+        if len([x for x in self.found_data if x['type'] == 'credential']) > 0:
+            section = "collapseCredentialsFoundData"
+            html += f"""
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
+                                View Detected Credentials ({len([x for x in self.found_data if x['type'] == 'credential'])})
+                            </button>
+                        </h2>
+                        <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                            data-bs-parent="#urlsAccordion">
+                            <div class="accordion-body">
+                                <table class="table table-bordered table-striped">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>HTML line</th>
+                                            <th>URL</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+            """
 
-      for data in self.found_data:
-          if data['type'] != "credential":
-            continue
-          html += f"""
-                                  <tr>
-                                      <td>{data['name']}</td>
-                                      <td>{htmllib.escape(data['line'])}</td>
-                                      <td><a href="{data['url']}">{data['url']}</a></td>
-                                  </tr>
-          """
+            for data in self.found_data:
+                if data['type'] != "credential":
+                    continue
+                html += f"""
+                                        <tr>
+                                            <td>{data['name']}</td>
+                                            <td>{htmllib.escape(data['line'])}</td>
+                                            <td><a href="{data['url']}">{data['url']}</a></td>
+                                        </tr>
+                """
 
-      html += """
-                              </tbody>
-                          </table>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      </section>
-      """
-    #endregion
+            html += """
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            """
+        #endregion
 
-    #region Comments
-    if len([x for x in self.found_data if x['type'] == 'other']) > 0:
-      section = "collapseCommentsFoundData"
-      html += f"""
-            <div class="accordion">
-              <div class="accordion-item">
-                  <h2 class="accordion-header">
-                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                          data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
-                          View Detected Comments ({len([x for x in self.found_data if x['type'] == 'other'])})
-                      </button>
-                  </h2>
-                  <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
-                      data-bs-parent="#urlsAccordion">
-                      <div class="accordion-body">
-                          <table class="table table-bordered table-striped">
-                              <thead class="table-dark">
-                                  <tr>
-                                      <th>Type</th>
-                                      <th>HTML line</th>
-                                      <th>URL</th>
-                                  </tr>
-                              </thead>
-                              <tbody>
-      """
+        #region Comments
+        if len([x for x in self.found_data if x['type'] == 'other']) > 0:
+            section = "collapseCommentsFoundData"
+            html += f"""
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
+                                View Detected Comments ({len([x for x in self.found_data if x['type'] == 'other'])})
+                            </button>
+                        </h2>
+                        <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                            data-bs-parent="#urlsAccordion">
+                            <div class="accordion-body">
+                                <table class="table table-bordered table-striped">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>HTML line</th>
+                                            <th>URL</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+            """
 
-      for data in self.found_data:
-          if data['type'] != "other":
-            continue
-          html += f"""
-                                  <tr>
-                                      <td>{data['name']}</td>
-                                      <td>{htmllib.escape(data['line'])}</td>
-                                      <td><a href="{data['url']}">{data['url']}</a></td>
-                                  </tr>
-          """
+            for data in self.found_data:
+                if data['type'] != "other":
+                    continue
+                html += f"""
+                                        <tr>
+                                            <td>{data['name']}</td>
+                                            <td>{htmllib.escape(data['line'])}</td>
+                                            <td><a href="{data['url']}">{data['url']}</a></td>
+                                        </tr>
+                """
 
-      html += """
-                              </tbody>
-                          </table>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      </section>
-      """
-    #endregion
+            html += """
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            """
+        #endregion
 
     #endregion
 
@@ -581,7 +583,7 @@ def html_report(self)->str:
                                 <tbody>
         """
 
-        for url,parameter,method,type in self.found_xss:
+        for url,parameter,method,type,confidence in self.found_xss:
             html += f"""
                                     <tr>
                                         <td>{type}</td>
