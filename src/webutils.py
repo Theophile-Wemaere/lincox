@@ -282,7 +282,7 @@ class ParaMiner:
             for line in file:
                 lines.append(line.replace('\n',''))
             
-        return lines
+        return list(set(lines))
 
     def __fetch_url(self,line:str)->str:
 

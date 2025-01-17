@@ -352,6 +352,9 @@ def test_default_credentials(form:dict)->dict:
                     default_size = len(r.text.split(' '))
 
                 r = requests.post(form['url'],data=parameters,headers=get_headers())
+                if username == "admin" and password == "root":
+                    print(len(r.text.split(' ')),default_size)
+                    print(r.text)
                 if len(r.text.split(' ')) != default_size:
                     valid.append((username,password))
 

@@ -97,33 +97,33 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
         # TODO : optional add other services enumeration, CPE fetching and CVE fetching with online API
 
-        target.enumerate_web_services()
+        # target.enumerate_web_services()
 
-        with open("target.pkl",'wb') as file:
-            pickle.dump(target,file)
+        # with open("target.pkl",'wb') as file:
+        #     pickle.dump(target,file)
 
-        target.search_parameters()
+        # target.search_parameters()
 
-        with open("target.pkl",'wb') as file:
-            pickle.dump(target,file)
+        # with open("target.pkl",'wb') as file:
+        #     pickle.dump(target,file)
         
-        if not ATTACK_MODE:
-            target.create_report()
-            exit(0)
+        # if not ATTACK_MODE:
+        #     target.create_report()
+        #     exit(0)
         
-        target.create_report()
+        # target.create_report()
 
-        # search for reflected XSS and DOM XSS (in GET params)
-        target.search_xss()
+        # # search for reflected XSS and DOM XSS (in GET params)
+        # target.search_xss()
 
-        # search local file inclusion (TODO: RFI ?)
-        target.search_lfi()
+        # # search local file inclusion (TODO: RFI ?)
+        # target.search_lfi()
 
-        # search SQL injection (integrate SQLmap)
-        target.search_sqli()
+        # # search SQL injection (integrate SQLmap)
+        # target.search_sqli()
 
-        # search open redirect (in GET params)
-        target.search_open_redirect()
+        # # search open redirect (in GET params)
+        # target.search_open_redirect()
         
         # search default creds / small bruteforce if login detected
         target.auth_attack()

@@ -278,7 +278,7 @@ class Target:
             for param in form['parameters']:
                 params += [param['name']]
             
-            id_form = form['url']+form['method']+",".join(params)
+            id_form = form['url'].split('?')[0]+form['method']+",".join(params)
             if id_form not in existing_forms:
                 existing_forms.append(id_form)
             else:
