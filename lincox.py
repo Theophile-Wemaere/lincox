@@ -125,7 +125,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
         # # search open redirect (in GET params)
         # target.search_open_redirect()
         
-        # search default creds / small bruteforce if login detected
+        # # search default creds / small bruteforce if login detected
         target.auth_attack()
 
         # # search SSRF (ngrok integration ?)

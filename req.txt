@@ -1,0 +1,24 @@
+POST /login/ HTTP/1.1
+Host: aubouleau.fr
+Cookie: csrftoken=HilKz5tz1KeD52J4ODc51iaF4Vw0ia6k
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:134.0) Gecko/20100101 Firefox/134.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: https://aubouleau.fr/login/
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 113
+Origin: https://aubouleau.fr
+Authorization: Basic YXVib3VsZWF1OmRzc2RqaXNmaGl1ZGhmYnVqaWhkc2ZnaHV5aXpzZXJnZnl6dXNlcmZn
+Upgrade-Insecure-Requests: 1
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: same-origin
+Sec-Fetch-User: ?1
+Dnt: 1
+Sec-Gpc: 1
+Priority: u=0, i
+Te: trailers
+Connection: keep-alive
+
+csrfmiddlewaretoken=tJ02qtntsBrObD0XyZ1QuYglSCqC7US20RbCPoGSjbvh6vzRcs3Ll6gQMnMsfUOc&username=admin&password=FUZZ

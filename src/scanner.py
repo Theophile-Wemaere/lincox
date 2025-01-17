@@ -291,6 +291,9 @@ class Target:
             self.forms_list.pop(i-shift)
             shift += 1
 
+        with open("forms.json","w") as file:
+            json.dump(self.forms,file)
+
         toolbox.tprint(f"Found {len(self.found_headers)} interesting headers, {len(self.found_data)} interesting data and {len(self.forms_list)} forms")
 
         toolbox.tprint(f"Running Fuzzer on {self.target}")
@@ -566,7 +569,6 @@ class Target:
             for param in form['parameters']:
                 param = param['name'].lower()
                 if param.find('password') != -1 or param.find('user') != -1 or param.find('email') != -1 or param.find('passwd') != -1:
-                    if form['url'].find('4280/setup.php') == -1 and form['url'].find('4280/vulnerabilities/captcha')  : # block setup and captcha URL from DVWA to avoid errors
                         is_login= True
             if is_login:
                 forms_to_test.append(form)
@@ -574,11 +576,28 @@ class Target:
         if len(forms_to_test) == 0:
             toolbox.tprint("No login forms found on target, skipping authentication attack")
 
-        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
-        time.sleep(5)
-        print(' '*72,end='\r')
+        # toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
+        # time.sleep(5)
+        # print(' '*72,end='\r')
+
+        print(json.dumps(forms_to_test,indent=1))
         
+        to_skip_url = [
+            "register",
+            "signin",
+            "captcha", # DVWA skipping
+            "setup"    # DVWA skipping
+        ]
+
         for form in forms_to_test:
+            skip = False
+            for entry in to_skip_url:
+                if entry in form['url']:
+                    skip = True
+
+            if skip:
+                continue
+            
             result = vt.test_default_credentials(form)
             if result:
                 for username,password in result:

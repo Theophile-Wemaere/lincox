@@ -120,3 +120,12 @@ def dict_filter_duplicates(dicts:list,filter:str)->list:
             unique_dicts.append(d)
             seen_values.add(d[filter])
     return unique_dicts
+
+# for debugging
+
+def log_request(r):
+    with open("output.html","w") as file:
+        file.write(f"HTTP/2 {r.status_code}\n")
+        for entry,value in r.headers.items():
+            file.write(f"{entry}: {value}\n")
+        file.write(r.text)

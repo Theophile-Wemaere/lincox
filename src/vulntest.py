@@ -1,6 +1,6 @@
 import requests
 from src import toolbox
-from src.webutils import get_headers, get_page_source
+from src.webutils import get_headers, get_page_source, search_page_for_form
 from urllib.parse import quote_plus
 import subprocess
 from urllib.parse import urlparse
@@ -278,12 +278,40 @@ def test_default_credentials(form:dict)->dict:
     test for most used credentials:
     """
 
+    def update_csrf(r,form):
+        forms = search_page_for_form(r.text,form['url'])
+        for current_form in forms:
+            if current_form['url'] == form['url'] and current_form['action'] == form['action']:
+                for param in current_form['parameters']:
+                    if param['name'] == csrf_param:
+                        form['parameters'][csrf_index]['value'] = param['value']
+        return form
+
+
     counter = 0
     is_first = True
     default_size = 0
+    previous_page = None
 
     credentials_list = []
     valid = []
+    has_csrf = False
+    csrf_param = None
+    csrf_index = None
+    session = requests.Session()
+    
+    c = 0
+    for param in form['parameters']:
+        if param['name'].lower().find('csrf') != -1:
+            toolbox.debug(f"Form at {form['url']} use a CSRF parameter : {param['name']}")
+            has_csrf = True
+            csrf_param = param['name']
+            csrf_index = c
+        c += 1
+
+    r = session.get(form['url'])
+    if has_csrf:
+        form = update_csrf(r,form)
 
     # wordlist format : Vendor,Username,Password,Comments
     with open("data/default-passwords.csv") as wordlist:
@@ -319,12 +347,13 @@ def test_default_credentials(form:dict)->dict:
                             def_parameters += f"&{param['name']}=lincox@gmail.com"
                         else:
                             def_parameters += f"&{param['name']}={param['value']}"
-                    r = requests.get(form['url']+def_parameters,headers=get_headers())
+                    r = session.get(form['url']+def_parameters,headers=get_headers())
                     default_size = len(r.text.split(' '))
                 
-                r = requests.get(form['url']+parameters,headers=get_headers())
+                r = session.get(form['url']+parameters,headers=get_headers())
                 if len(r.text.split(' ')) != default_size:
                     valid.append((username,password))
+                    session = requests.session()
 
             if form['method'].lower() == 'post':
                 parameters = {}
@@ -348,15 +377,27 @@ def test_default_credentials(form:dict)->dict:
                             def_parameters[param['name']] = "lincox@gmail.com"
                         else:
                             def_parameters[param['name']] = param['value']
-                    r = requests.post(form['url'],data=def_parameters,headers=get_headers())
+                    r = session.post(form['url'],data=def_parameters,headers=get_headers(),allow_redirects=False)
                     default_size = len(r.text.split(' '))
+                    toolbox.debug(f"Default response for form at {form['url']} : {default_size} words")
+                    previous_page = r.text
 
-                r = requests.post(form['url'],data=parameters,headers=get_headers())
-                if username == "admin" and password == "root":
-                    print(len(r.text.split(' ')),default_size)
-                    print(r.text)
+                    if has_csrf:
+                        form = update_csrf(r,form)
+
+                request_valid = False
+                r = session.post(form['url'],data=parameters,headers=get_headers(),allow_redirects=False)
+                previous_page = r.text
+
                 if len(r.text.split(' ')) != default_size:
                     valid.append((username,password))
+                    if has_csrf:
+                        break
+                    # # restart Session
+                    # session = requests.Session()
+                    # r = session.get(form['url'])
+                    # if has_csrf:
+                    #     form = update_csrf(r,form)
 
             bar()
     

@@ -4,5 +4,6 @@ venv/
 *_subdomains.txt
 test/
 *.html
+*.json
 tools/
 sqlmap_output/
