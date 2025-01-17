@@ -31,6 +31,15 @@ strict : only scan the given target, (no ports and subdomains enumeration)
 medium : default value, scan target for differents services on most used ports
 full : scan for subdomains and others services on found subdomains""")
 
+    parser.add_argument("--attacks", nargs='?', dest="attacks_flag" ,const='XLSOBR', help="""attacks to perform : 
+X : XSS
+L : LFI
+S : SQL injection
+O : open-redirect
+B : brute-force
+R : SSRF
+Default to 'XLSOBR' if this parameter is not used""")
+
     parser.add_argument("-p","--ports", nargs='?', dest="ports" ,const='ports', help="""List of port to scan
 Use CSV (80,8080,8443) or range (10-1000)
 Default : 80,443,8000,8080,8081,8443\n """)
@@ -42,8 +51,6 @@ Default : 80,443,8000,8080,8081,8443\n """)
     parser.add_argument("-d","-v","--verbose","--debug", action="store_true" ,dest="debug", help="Debug/Verbose mode")
     parser.add_argument("-q","--quiet", action="store_true" ,dest="quiet", help="Hide banner")
     parser.add_argument("-l", action="store_true", dest="load" , help="load pickle target")
-    # -f force scan without ping
-    # -p coma separated list of ports
 
     args = parser.parse_args()
 
@@ -51,6 +58,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
     SUBDOMAINS_ENUM = False
     SCOPE = "medium"
     FORCE = False
+    FLAGS = 'XLSOBR'
 
     if args.mode:
         if args.mode.lower() == "enum":
@@ -65,6 +73,12 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
     if args.force:
             FORCE = True
+
+    if ATTACK_MODE and args.attacks_flag:
+        FLAGS = ''
+        for c in args.attacks_flag:
+            if c.upper() in 'XLSOBR':
+                FLAGS += c.upper()
 
     if args.debug:
         toolbox.set_debug(True)
@@ -97,36 +111,35 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
         # TODO : optional add other services enumeration, CPE fetching and CVE fetching with online API
 
-        # target.enumerate_web_services()
+        target.enumerate_web_services()
 
-        # with open("target.pkl",'wb') as file:
-        #     pickle.dump(target,file)
-
-        # target.search_parameters()
-
-        # with open("target.pkl",'wb') as file:
-        #     pickle.dump(target,file)
+        target.search_parameters()
         
-        # if not ATTACK_MODE:
-        #     target.create_report()
-        #     exit(0)
+        if not ATTACK_MODE:
+            target.create_report()
+            exit(0)
         
-        # target.create_report()
+        target.create_report()
 
-        # # search for reflected XSS and DOM XSS (in GET params)
-        # target.search_xss()
+        if 'X' in FLAGS:
+            # search for reflected XSS and DOM XSS (in GET params)
+            target.search_xss()
 
-        # # search local file inclusion (TODO: RFI ?)
-        # target.search_lfi()
+        if 'L' in FLAGS:
+            # search local file inclusion (TODO: RFI ?)
+            target.search_lfi()
 
-        # # search SQL injection (integrate SQLmap)
-        # target.search_sqli()
+        if 'S' in FLAGS:        
+            # search SQL injection (integrate SQLmap)
+            target.search_sqli()
 
-        # # search open redirect (in GET params)
-        # target.search_open_redirect()
+        if 'O' in FLAGS: 
+            # search open redirect (in GET params)
+            target.search_open_redirect()
         
-        # # search default creds / small bruteforce if login detected
-        target.auth_attack()
+        if 'B' in FLAGS:
+            # # search default creds / small bruteforce if login detected
+            target.auth_attack()
 
         # # search SSRF (ngrok integration ?)
         # target.search_ssrf()

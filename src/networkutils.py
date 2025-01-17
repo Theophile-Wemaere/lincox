@@ -102,7 +102,11 @@ def nmap_scan(address: str, ports: str)-> dict:
 
     open_ports = {}
 
-    address = socket.gethostbyname(address)
+    try:
+        address = socket.gethostbyname(address)
+    except Exception as e:
+        toolbox.warn(f"{address} : {str(e)}")
+        return {}
 
     nm = nmap.PortScanner()
     nm.scan(address, ports)

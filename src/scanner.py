@@ -292,7 +292,7 @@ class Target:
             shift += 1
 
         with open("forms.json","w") as file:
-            json.dump(self.forms,file)
+            json.dump(self.forms_list,file)
 
         toolbox.tprint(f"Found {len(self.found_headers)} interesting headers, {len(self.found_data)} interesting data and {len(self.forms_list)} forms")
 
@@ -579,14 +579,14 @@ class Target:
         # toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
         # time.sleep(5)
         # print(' '*72,end='\r')
-
-        print(json.dumps(forms_to_test,indent=1))
         
         to_skip_url = [
             "register",
-            "signin",
-            "captcha", # DVWA skipping
-            "setup"    # DVWA skipping
+            "signup",
+            "sign-up",
+            "captcha",     # DVWA skipping
+            "setup.php",       # DVWA skipping
+            "security.php" # DVWA skipping
         ]
 
         for form in forms_to_test:
@@ -597,16 +597,11 @@ class Target:
 
             if skip:
                 continue
-            
+
             result = vt.test_default_credentials(form)
             if result:
                 for username,password in result:
                     toolbox.vprint(f"Possible valid credential : {colored(username,"green",attrs=["bold"])} : {colored(password,"green",attrs=["bold"])}",level=3)
-            else:
-                result = vt.bruteforce_form(form)
-                if result:
-                    print(result)
-
 
 
     def create_report(self):

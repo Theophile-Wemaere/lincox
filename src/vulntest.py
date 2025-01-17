@@ -281,7 +281,7 @@ def test_default_credentials(form:dict)->dict:
     def update_csrf(r,form):
         forms = search_page_for_form(r.text,form['url'])
         for current_form in forms:
-            if current_form['url'] == form['url'] and current_form['action'] == form['action']:
+            if current_form['url'] == form['url'] and current_form['url'] == form['url']:
                 for param in current_form['parameters']:
                     if param['name'] == csrf_param:
                         form['parameters'][csrf_index]['value'] = param['value']
@@ -309,7 +309,7 @@ def test_default_credentials(form:dict)->dict:
             csrf_index = c
         c += 1
 
-    r = session.get(form['url'])
+    r = session.get(form['origin_url'])
     if has_csrf:
         form = update_csrf(r,form)
 
@@ -317,7 +317,7 @@ def test_default_credentials(form:dict)->dict:
     with open("data/default-passwords.csv") as wordlist:
         for line in wordlist:
             line = line.replace('\n','').split(',')
-            username, password = line[1],line[2]
+            username, password = line
             if (username,password) not in credentials_list:
                 credentials_list.append((username,password))
 

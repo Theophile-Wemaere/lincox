@@ -449,25 +449,14 @@ def search_page_for_technology(page:str,url:str)->list:
 
         line = line.lower().strip()
 
-        if re.search(r'<\s*input[^>]*type\s*=\s*["\']password["\']', line, re.IGNORECASE):
-            return False
-        if re.search(r'<.*?>', line):
-            return False
-
-        if re.search(r'(Enter\s+(password|pass)|Your\s+(password|pass))', line, re.IGNORECASE):
-            return False
-
-        if re.search(r'(password|pass)\s*=\s*["\'].*["\']', line, re.IGNORECASE):
+        if re.search(r'(password|pass)\s*=.*', line, re.IGNORECASE):
             return True
             
         if re.search(r'set(P|p)ass(word)?\s*\(', line):
             return True
 
-        if re.search(r'["\'](password|pass)["\']\s*:\s*["\'].*["\']', line, re.IGNORECASE):
+        if re.search(r'(password|pass).*:.*', line, re.IGNORECASE):
             return True
-
-        if re.search(r'(password|pass)\s*=\s*os\.environ\.get', line, re.IGNORECASE):
-            return False
 
         if line.find("passwd") != -1 or line.find("passphrase") != -1 or line.find("password") != -1:
             return True
@@ -478,22 +467,13 @@ def search_page_for_technology(page:str,url:str)->list:
 
         line = line.lower().strip()
 
-        if re.search(r'<.*?>', line):
-            return False
-
-        if re.search(r'(Enter\s+(username|user|email|credential)|Your\s+(username|user|email|credential))', line, re.IGNORECASE):
-            return False
-
-        if re.search(r'(username|user|email|credential)\s*=\s*["\'].*["\']', line, re.IGNORECASE):
+        if re.search(r'(username|user|mail|credential)\s*=.*', line, re.IGNORECASE):
             return True
-        if re.search(r'set(User(name)?|Email|Credential)\s*\(', line, re.IGNORECASE):
+        if re.search(r'set(User(name)?|mail|Credential)\s*\(', line, re.IGNORECASE):
             return True
 
-        if re.search(r'["\'](username|user|email|credential)["\']\s*:\s*["\'].*["\']', line, re.IGNORECASE):
+        if re.search(r'(username|user|mail|credential).*:.*', line, re.IGNORECASE):
             return True
-
-        if re.search(r'(username|user|email|credential)\s*=\s*os\.environ\.get', line, re.IGNORECASE):
-            return False
 
         return False
 
@@ -581,10 +561,13 @@ def search_page_for_form(page:str,url:str)-> list:
     form_data_list = []
 
     for form in forms:
+        action = form.get('action')
+        if action:
+            action = urljoin(url, action)
         form_info = {
             "method": form.get('method', 'get').lower(),
-            "action": form.get('action'),
-            "url": url,
+            "url": action if action else url,
+            "origin_url": url,
             "parameters": []
         }
 
