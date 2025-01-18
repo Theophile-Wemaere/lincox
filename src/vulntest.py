@@ -1,12 +1,16 @@
 import requests
 from src import toolbox
 from src.webutils import get_headers, get_page_source, search_page_for_form
+from src.networkutils import PortScanner
 from urllib.parse import quote_plus
 import subprocess
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 import re
 from alive_progress import alive_bar
-
+import socket, errno
+import ipaddress
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
 import time
 
 def search_reflection(page:str,payload):
@@ -425,3 +429,100 @@ def test_default_credentials(form:dict)->dict:
         return valid
     else:
         return None
+
+pingback_received = False
+
+def test_ssrf(url:str,params:list,method:str,req_id:str)->str:
+    """
+    very simple test for SSRF in parameters
+    """
+
+    global pingback_received
+
+    pingback_received = False
+
+    def get_local_ip():
+        """
+        Gets the local IP address
+        """
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))  # Connect to a public DNS server
+            local_ip = s.getsockname()[0]
+            s.close()
+            return local_ip
+        except Exception as e:
+            print(f"Error getting local IP: {e}")
+            return "127.0.0.1" # fallback to localhost
+
+    
+    def is_valid_ip(ip):
+        """
+        check if ip address is valid
+        """
+        try:
+            ipaddress.ip_address(ip)
+            return True
+        except ValueError:
+            return False
+
+    class QuietHTTPRequestHandler(BaseHTTPRequestHandler):
+        def log_message(self, format, *args):
+            return
+
+        def do_GET(self):
+            global pingback_received
+            toolbox.debug(f"Pingback received from: {self.client_address[0]} - Path: {self.path}")
+            if self.path == f"/lincox_{req_id}.png":
+                pingback_received = True
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"lincox")
+
+    def start_web_server(port):
+        httpd = HTTPServer(('', port), QuietHTTPRequestHandler)
+        thread = threading.Thread(target=httpd.serve_forever)
+        thread.daemon = True
+        thread.start()
+        toolbox.debug(f"Web server started on port {port}")
+        return httpd
+
+    web_server_port = 8000
+    port_available = False
+    while not port_available:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+             s.bind(("127.0.0.1", web_server_port))
+             port_available = True
+             s.close()
+        except socket.error as e:
+            if e.errno == errno.EADDRINUSE:
+                web_server_port += 1
+    
+    httpd = start_web_server(web_server_port)
+    
+    local_ip = get_local_ip()
+    injection_url = f"http://{local_ip}:{web_server_port}/lincox_{req_id}.png"
+
+    if method.lower() == "get":
+        parameters = "?"
+        for param in params:
+            parameters += f"&{param}={quote_plus(injection_url)}"
+        
+        r = requests.get(url + '?' + parameters, headers=get_headers())
+    
+    
+    if method.lower() == "post":
+        parameters = {}
+        for param in params:
+            parameters[param] = injection_url
+
+        r = requests.post(url, data=parameters, headers=get_headers())
+
+
+    httpd.shutdown()
+
+    if pingback_received:
+        return parameters
+    else:
+        return False

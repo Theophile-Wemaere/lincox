@@ -10,6 +10,7 @@ from datetime import datetime
 from alive_progress import alive_bar
 import json
 import shutil
+import random
 from termcolor import colored
 
 class Target:
@@ -460,7 +461,7 @@ class Target:
         print()
 
         if len(self.params_to_test) == 0:
-            toolbox.tprint("No parameters found on target, skipping LFI/RFI detection")
+            toolbox.tprint("No parameters found on target, skipping LFI detection")
             return
 
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
@@ -472,7 +473,7 @@ class Target:
             for url,parameters,method in self.params_to_test:
                     result = vt.test_lfi_linux(url,parameters,method)
                     if result:
-                        msgs.append(f"LFI detected on {url}{result}")
+                        msgs.append(f"LFI detected on {method.upper()} {url} with parameter : {result}")
                     bar()
 
         for msg in msgs:
@@ -606,6 +607,33 @@ class Target:
                 for username,password in result:
                     toolbox.vprint(f"Possible valid credential : {colored(username,"green",attrs=["bold"])} : {colored(password,"green",attrs=["bold"])}",level=3)
 
+    def search_ssrf(self):
+        """
+        search for Server Side Request Forgery
+        """
+
+        print()
+
+        if len(self.params_to_test) == 0:
+            toolbox.tprint("No parameters found on target, skipping SSRF detection")
+            return
+
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...",end='\r')
+        time.sleep(5)
+        print(' '*72,end='\r')
+
+        msgs = []
+        with alive_bar(len(self.params_to_test), title=toolbox.get_header("ATTACK")+f"Testing SSRF on found forms and parameters", enrich_print=False) as bar:
+            for url,parameters,method in self.params_to_test:
+                    # random hash for request identification
+                    req_id = str(random.getrandbits(16))
+                    result = vt.test_ssrf(url,parameters,method,req_id)
+                    if result:
+                        msgs.append(f"SSRF detected on {method.upper()} {url} with parameter : {result}")
+                    bar()
+
+        for msg in msgs:
+            toolbox.vprint(msg,level=3)
 
     def create_report(self):
         """

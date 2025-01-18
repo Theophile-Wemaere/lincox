@@ -158,11 +158,12 @@ Default : 80,443,8000,8080,8081,8443\n """)
             target.search_open_redirect()
         
         if 'B' in FLAGS:
-            # # search default creds / small bruteforce if login detected
+            # search default creds / small bruteforce if login detected
             target.auth_attack()
 
-        # # search SSRF (ngrok integration ?)
-        # target.search_ssrf()
+        if 'R' in FLAGS:
+            # search SSRF (ngrok integration ?)
+            target.search_ssrf()
 
         # # search misconfigurations : headers, rate limiting, versions... (optional)
         # target.search_misconfiguration()
