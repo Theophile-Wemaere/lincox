@@ -32,14 +32,16 @@ strict : only scan the given target, (no ports and subdomains enumeration)
 medium : default value, scan target for differents services on most used ports
 full : scan for subdomains and others services on found subdomains""")
 
-    parser.add_argument("--attacks", nargs='?', dest="attacks_flag" ,const='XLSOBR', help="""attacks to perform : 
+    parser.add_argument("--attacks", nargs='?', dest="attacks_flag" ,const='XLSOBRMW', help="""attacks to perform : 
 X : XSS
 L : LFI
 S : SQL injection
 O : open-redirect
 B : brute-force
 R : SSRF
-Default to 'XLSOBR' if this parameter is not used""")
+M : misconfiguration (CSRF, headers)
+W : wordpress scan (if applicable)
+Default to 'XLSOBRMW' if this parameter is not used""")
 
     parser.add_argument("-p","--ports", nargs='?', dest="ports" ,const='ports', help="""List of port to scan
 Use CSV (80,8080,8443) or range (10-1000)
@@ -60,7 +62,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
     SUBDOMAINS_ENUM = False
     SCOPE = "medium"
     FORCE = False
-    FLAGS = 'XLSOBR'
+    FLAGS = 'XLSOBRMW'
 
     # select scanning mode
     if args.mode:
@@ -84,7 +86,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
     if ATTACK_MODE and args.attacks_flag:
         FLAGS = ''
         for c in args.attacks_flag:
-            if c.upper() in 'XLSOBR':
+            if c.upper() in 'XLSOBRMW':
                 FLAGS += c.upper()
 
     # set custom headers:
@@ -165,10 +167,13 @@ Default : 80,443,8000,8080,8081,8443\n """)
             # search SSRF (ngrok integration ?)
             target.search_ssrf()
 
-        # # search misconfigurations : headers, rate limiting, versions... (optional)
-        # target.search_misconfiguration()
+        if 'M' in FLAGS:
+            # search misconfigurations : headers, rate limiting, versions... (optional)
+            target.search_misconfiguration()
 
-        # # WPscan integration ?
+        if 'W' in FLAGS:
+            # WPscan integration ?
+            pass
         # target.wp_scan()
 
         target.create_report()

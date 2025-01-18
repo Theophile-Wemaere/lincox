@@ -642,6 +642,22 @@ def get_form_w_selenium(url:str)->dict:
     forms = search_page_for_form(page,url)
     return forms
 
+def get_server_headers(url:str)->dict:
+    """
+    simply return the headers for a given url
+    """
+
+    session  = requests.Session()
+    r = session.get(url,headers=get_headers())
+
+    headers = {}
+    for header,value in session.headers.items():
+        headers[header.lower()] = value
+    for header,value in r.headers.items():
+        headers[header.lower()] = value
+
+    return headers
+
 # def search_technology(urls:list):
 #     """
 #     enumerate given urls to search for special headers or technology info

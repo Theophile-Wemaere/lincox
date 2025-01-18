@@ -8,7 +8,7 @@ def set_debug(status):
 
     global DEBUG
     DEBUG = status
-    print(f"DEBUG : {DEBUG}")
+    print(colored("DEBUG = True","black","on_red",attrs=["bold"]))
 
 def print_banner():
     banner = """

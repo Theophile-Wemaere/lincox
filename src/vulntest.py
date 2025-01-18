@@ -509,7 +509,7 @@ def test_ssrf(url:str,params:list,method:str,req_id:str)->str:
         for param in params:
             parameters += f"&{param}={quote_plus(injection_url)}"
         
-        r = requests.get(url + '?' + parameters, headers=get_headers())
+        r = requests.get(url + parameters, headers=get_headers())
     
     
     if method.lower() == "post":
@@ -526,3 +526,59 @@ def test_ssrf(url:str,params:list,method:str,req_id:str)->str:
         return parameters
     else:
         return False
+
+def test_csrf(form:dict)->int:
+    """
+    test if CSRF protection is in place and if it's used
+    """
+
+    possible_csrf_params = [
+        "csrf_token",
+        "csrf",
+        "_csrf",
+        "_token",
+        "X-CSRF-Token",
+        "token",
+        "authenticity_token",
+        "csrfmiddlewaretoken",
+        "security_token",
+        "xsrf_token",
+        "request_token",
+        "csrfParam",
+        "session_token",
+        "csrfToken",
+        "x-csrf-token"
+    ]
+
+    has_csrf_param = False
+    for param in form['parameters']:
+        for possible_param in possible_csrf_params:
+            if possible_param.lower() in param['name'].lower():
+                # toolbox.debug(f"Found CSRF parameter : {param['name']}")
+                has_csrf_param = True
+
+    if has_csrf_param:
+        # possible CSRF parameter
+        r = None
+        if form['method'].lower() == "get":
+            parameters = "?"
+            for param in form['parameters']:
+                parameters += f"&{param['name']}=lincox@gmail.com"
+            
+            r = requests.get(form['url'] + parameters, headers=get_headers())
+        
+        
+        if form['method'].lower() == "post":
+            parameters = {}
+            for param in form['parameters']:
+                parameters[param['name']] = "lincox@gmail.com"
+
+            r = requests.post(form['url'], data=parameters, headers=get_headers())
+
+        if 400 <= r.status_code < 500:
+            return False
+        else:
+            return 2
+    else:
+        # not CSRF parameter found
+        return 1
