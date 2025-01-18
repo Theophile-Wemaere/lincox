@@ -16,6 +16,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import time
 
 
@@ -33,7 +34,9 @@ def get_headers():
 
     # random user agent for FW bypass (work sometimes)
     headers = copy.deepcopy(HEADERS)
-    headers["User-Agent"] += "." + str(random.getrandbits(24))
+    if "lincox 1.0" in headers["User-Agent"]:
+        # do this test to avoid overwriting custom UA
+        headers["User-Agent"] += "." + str(random.getrandbits(24))
 
     return headers
 
@@ -610,10 +613,14 @@ def get_page_source(url):
     options = webdriver.ChromeOptions()
     options.add_argument('--headless=new')
     options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
+    # options.add_argument('--disable-dev-shm-usage')
 
     try:
         driver = webdriver.Chrome(options=options)
+        driver.execute_cdp_cmd("Network.enable", {})
+        driver.execute_cdp_cmd("Network.setExtraHTTPHeaders", {
+            "headers": get_headers()
+        })
         driver.get(url)
         time.sleep(3)
         page_source = driver.page_source

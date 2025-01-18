@@ -264,7 +264,7 @@ def test_open_redirect(url:str,parameter:str)->str:
 
     test_url = url + '?' + parameter + f"=//google.com/{url}"
     # toolbox.debug(f"Testing URL: {test_url}")
-    response = requests.get(test_url, allow_redirects=False, timeout=timeout)
+    response = requests.get(test_url, allow_redirects=False, timeout=timeout, headers=get_headers())
 
     if 300 <= response.status_code < 400:
         redirect_location = response.headers.get("Location")
@@ -329,7 +329,7 @@ def test_default_credentials(form:dict)->dict:
             csrf_index = c
         c += 1
 
-    r = session.get(form['origin_url'])
+    r = session.get(form['origin_url'],headers=get_headers())
     if has_csrf:
         form = update_csrf(r,form)
 
@@ -415,7 +415,7 @@ def test_default_credentials(form:dict)->dict:
                         break
                     # # restart Session
                     # session = requests.Session()
-                    # r = session.get(form['url'])
+                    # r = session.get(form['url'],headers=get_headers())
                     # if has_csrf:
                     #     form = update_csrf(r,form)
 

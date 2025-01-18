@@ -4,6 +4,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 from src import toolbox
 from src import scanner
+from src import webutils
 import pickle
 import os
 
@@ -46,6 +47,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
     parser.add_argument("-f","--force", action="store_true" ,dest="force", help="Force enumeration if target seems down (no pingback)")
     parser.add_argument("-sd","--subdomains", action="store_true" ,dest="subdomains", help="Perform subdomain enumeration")
+    parser.add_argument("-H", "--headers", dest="headers", action="append", help="Specify a header to be included. Can be used multiple times.")
 
     # debug options
     parser.add_argument("-d","-v","--verbose","--debug", action="store_true" ,dest="debug", help="Debug/Verbose mode")
@@ -60,25 +62,39 @@ Default : 80,443,8000,8080,8081,8443\n """)
     FORCE = False
     FLAGS = 'XLSOBR'
 
+    # select scanning mode
     if args.mode:
         if args.mode.lower() == "enum":
             ATTACK_MODE = False
 
+    # select scope
     if args.scope:
         if args.scope.lower() == "strict" or args.scope.lower() == "full":
             SCOPE = args.scope.lower()
 
+    # select subdomain enumeration
     if args.subdomains or SCOPE == "full":
         SUBDOMAINS_ENUM = True
 
+    # set force scan mode
     if args.force:
             FORCE = True
 
+    # set attacks to perform
     if ATTACK_MODE and args.attacks_flag:
         FLAGS = ''
         for c in args.attacks_flag:
             if c.upper() in 'XLSOBR':
                 FLAGS += c.upper()
+
+    # set custom headers:
+    if args.headers:
+        for header in args.headers:
+            index = header.find(':')
+            name,value = header[:index], header[index+1:]
+            while value.startswith(' '):
+                value = value[1:]
+            webutils.HEADERS[name] = value
 
     if args.debug:
         toolbox.set_debug(True)
@@ -102,7 +118,8 @@ Default : 80,443,8000,8080,8081,8443\n """)
             if SUBDOMAINS_ENUM:
                 target.enumerate_subdomains()
                 target.create_report()
-                exit(0)
+                if not SCOPE == "full":
+                    exit(0)
 
             target.search_services()
 
