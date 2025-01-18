@@ -447,6 +447,8 @@ class Target:
         search for reflected XSS in GET parameters
         """
 
+        self.found_xss = []
+
         print()
 
         if len(self.url_parameters) == 0:
@@ -465,29 +467,29 @@ class Target:
                     param[0], param[1], "GET", param[5])
                 if result:
                     payload, confidence_level = result
-                    msgs.append(f"Possible reflected XSS ({confidence_level} confidence) on {
-                                param[0]}?{param[1]}={payload}")
-                    self.found_xss.append(
-                        (param[0], param[1], "GET", "reflected XSS", confidence_level))
+                    msgs.append(f"Possible reflected XSS ({confidence_level} confidence) on {param[0]}?{param[1]}={payload}")
+                    self.found_xss.append((param[0], param[1], "GET", "reflected XSS", confidence_level,payload))
                 else:
                     result = vt.test_dom_reflection(
                         param[0], param[1], param[5])
                     if result:
                         payload, confidence_level = result
-                        msgs.append(f"Possible DOM XSS ({confidence_level} confidence) on {
-                                    param[0]}?{param[1]}={payload}")
-                        self.found_xss.append(
-                            (param[0], param[1], "GET", "DOM XSS", confidence_level))
+                        msgs.append(f"Possible DOM XSS ({confidence_level} confidence) on {param[0]}?{param[1]}={payload}")
+                        self.found_xss.append((param[0], param[1], "GET", "DOM XSS", confidence_level,payload))
                 bar()
 
         for msg in msgs:
             toolbox.vprint(msg, level=2)
+        if len(msgs) == 0:
+            toolbox.tprint("No XSS found")
 
     def search_lfi(self):
         """
         search for LFI and maybe RFI in the futur
         for now, only Linux based system (marker is /etc/passwd)
         """
+
+        self.found_fi = []
 
         print()
 
@@ -505,18 +507,22 @@ class Target:
             for url, parameters, method in self.params_to_test:
                 result = vt.test_lfi_linux(url, parameters, method)
                 if result:
-                    msgs.append(f"LFI detected on {method.upper()} {
-                                url} with parameter : {result}")
+                    msgs.append(f"LFI detected on {method.upper()} {url} with parameter : {result}")
+                    self.found_fi.append((url,method,result))
                 bar()
 
         for msg in msgs:
             toolbox.vprint(msg, level=3)
+        if len(msgs) == 0:
+            toolbox.tprint("No LFI injection found")
 
     def search_sqli(self):
         """
         search for SQL injection inside found parameters
         use SQLMAP for maximum efficiency
         """
+
+        self.found_sqli = []
 
         print()
 
@@ -556,18 +562,21 @@ class Target:
                 results = vt.test_sqli(command, url, parameters, method)
                 if results:
                     for result in results:
-                        msgs.append(f"SQL injection detected on {
-                                    url} with parameter {result[2]} : {result[3]}")
-                        self.found_sqli.append(result)
+                        msgs.append(f"SQL injection detected on {url} with parameter {result[2]} : {result[3]}")
+                        self.found_sqli.append((url,result))
                 bar()
 
         for msg in msgs:
             toolbox.vprint(msg, level=3)
+        if len(msgs) == 0:
+            toolbox.tprint("No SQL injection found")
 
     def search_open_redirect(self):
         """
         search for open redirection inside GET parameters
         """
+
+        self.found_openredirect = []
 
         print()
 
@@ -586,15 +595,11 @@ class Target:
                 result = vt.test_open_redirect(param[0], param[1])
                 if result:
                     if result == "internal":
-                        msgs.append(f"Possible internal open redirect on {
-                                    param[0]}?{param[1]}=here")
-                        self.found_openredirect.append(
-                            (param[0], param[1], "GET", "internal open redirect"))
+                        msgs.append(f"Possible internal open redirect on {param[0]}?{param[1]}=here")
+                        self.found_openredirect.append((param[0], param[1], "GET", "internal open redirect"))
                     elif result == "external":
-                        msgs.append(f"Possible external open redirect on {
-                                    param[0]}?{param[1]}=here")
-                        self.found_openredirect.append(
-                            (param[0], param[1], "GET", "external open redirect"))
+                        msgs.append(f"Possible external open redirect on {param[0]}?{param[1]}=here")
+                        self.found_openredirect.append((param[0], param[1], "GET", "external open redirect"))
                 else:
                     # test with selenium for client side open redirect ?
                     pass
@@ -602,11 +607,15 @@ class Target:
 
         for msg in msgs:
             toolbox.vprint(msg, level=1)
+        if len(msgs) == 0:
+            toolbox.tprint("No Open Redirect found")
 
     def auth_attack(self):
         """
         test for default creds/small bruteforce is login detected
         """
+
+        self.found_credentials = []
 
         print()
 
@@ -649,13 +658,19 @@ class Target:
             result = vt.test_default_credentials(form)
             if result:
                 for username, password in result:
-                    toolbox.vprint(f"Possible valid credential : {colored(username, "green", attrs=[
-                                   "bold"])} : {colored(password, "green", attrs=["bold"])}", level=3)
+                    toolbox.vprint(f"Possible valid credential : {colored(username, "green", 
+                        attrs=["bold"])} : {colored(password, "green", attrs=["bold"])}", level=3)
+                    self.found_credentials.append((form['url'],username,password))
+        
+        if len(self.found_credentials) == 0:
+            toolbox.tprint("No default credentials found")
 
     def search_ssrf(self):
         """
         search for Server Side Request Forgery
         """
+
+        self.found_ssrf = []
 
         print()
 
@@ -675,17 +690,21 @@ class Target:
                 req_id = str(random.getrandbits(16))
                 result = vt.test_ssrf(url, parameters, method, req_id)
                 if result:
-                    msgs.append(f"SSRF detected on {method.upper()} {
-                                url} with parameter : {result}")
+                    msgs.append(f"Possible SSRF detected on {method.upper()} {url} with parameter : {result}")
+                    self.found_ssrf.append((url,method,parameters))
                 bar()
 
         for msg in msgs:
             toolbox.vprint(msg, level=3)
+        if len(msgs) == 0:
+            toolbox.tprint("No SSRF found")
 
     def search_misconfiguration(self):
         """
         search for common misconfiguration / bad practice
         """
+
+        self.found_misconf = []
 
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...", end='\r')
         time.sleep(5)
@@ -697,8 +716,8 @@ class Target:
         useful_headers = {
             'Content-Security-Policy': 'Defines a policy for content loading on the page, helping to prevent cross-site scripting (XSS) and other code injection attacks by specifying which sources of content are trusted.',
             'X-Frame-Options': 'Prevents the page from being embedded in an iframe, which helps mitigate clickjacking attacks by disallowing the page to be displayed in a potentially malicious context.',
-            'X-Content-Type-Options': 'Prevents the browser from interpreting files as a different MIME type than what is specified in the `Content-Type` header, helping to mitigate attacks based on MIME-sniffing vulnerabilities.',
-            'Referrer-Policy': 'Controls how much information is sent in the `Referer` header when navigating to a different site, reducing privacy risks by limiting exposure of sensitive URL data.',
+            'X-Content-Type-Options': 'Prevents the browser from interpreting files as a different MIME type than what is specified in the "Content-Type" header, helping to mitigate attacks based on MIME-sniffing vulnerabilities.',
+            'Referrer-Policy': 'Controls how much information is sent in the "Referer" header when navigating to a different site, reducing privacy risks by limiting exposure of sensitive URL data.',
             'Permissions-Policy': 'Controls which features and APIs (like geolocation, camera, etc.) can be used on a website, helping to reduce the potential attack surface by limiting access to sensitive browser features.',
         }
 
@@ -730,8 +749,7 @@ class Target:
 
                 for header in current_headers:
                     if header.lower().find('set-cookie') != -1:
-                        cookie_attrs = current_headers[header].lower().split(
-                            ';')
+                        cookie_attrs = current_headers[header].lower().split(';')
                         HttpOnly = True
                         Secure = True
                         if not "httponly" in cookie_attrs:
@@ -761,8 +779,20 @@ class Target:
                 result = vt.test_csrf(form)
                 if result:
                     if result == 1:
+                        self.found_misconf.append({
+                            "type":"csrf_not_found",
+                            "url": form['url'],
+                            "name": None,
+                            'comments': form['method']
+                        })
                         msgs.append(f"CSRF not found for form on {form['method']} {form['url']}")
                     if result == 2:
+                        self.found_misconf.append({
+                            "type":"csrf_not_used",
+                            "url": form['url'],
+                            "name": None,
+                            'comments': form['method']
+                        })
                         msgs.append(f"CSRF found but not used on {form['method']} {form['url']}")
                 bar()
 

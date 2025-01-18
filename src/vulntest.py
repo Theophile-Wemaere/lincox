@@ -67,7 +67,7 @@ def test_reflection(url:str,param:str,method:str,type:str)->str:
     if found == 0:
         return None
     else:
-        return best_payload, confidence
+        return quote_plus(best_payload), confidence
 
 def test_dom_reflection(url:str,param:str,type:str)->str:
     """
@@ -504,12 +504,14 @@ def test_ssrf(url:str,params:list,method:str,req_id:str)->str:
     local_ip = get_local_ip()
     injection_url = f"http://{local_ip}:{web_server_port}/lincox_{req_id}.png"
 
+    # TODO : add payloads to test for different URL scheme
+
     if method.lower() == "get":
         parameters = "?"
         for param in params:
             parameters += f"&{param}={quote_plus(injection_url)}"
         
-        r = requests.get(url + parameters, headers=get_headers())
+        r = requests.get(url + parameters, headers=get_headers(), allow_redirects=False)
     
     
     if method.lower() == "post":
@@ -517,7 +519,7 @@ def test_ssrf(url:str,params:list,method:str,req_id:str)->str:
         for param in params:
             parameters[param] = injection_url
 
-        r = requests.post(url, data=parameters, headers=get_headers())
+        r = requests.post(url, data=parameters, headers=get_headers(), allow_redirects=False)
 
 
     httpd.shutdown()

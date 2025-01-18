@@ -138,10 +138,9 @@ Default : 80,443,8000,8080,8081,8443\n """)
         # TODO : optional add other services enumeration, CPE fetching and CVE fetching with online API
         
         if not ATTACK_MODE:
+            target.attack_mode = False
             target.create_report()
             exit(0)
-        
-        target.create_report()
 
         if 'X' in FLAGS:
             # search for reflected XSS and DOM XSS (in GET params)
