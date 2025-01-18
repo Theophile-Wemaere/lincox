@@ -5,6 +5,7 @@
 .cvs
 .cvsignore
 .forward
+.env
 .git
 .git-rewrite
 .git/HEAD

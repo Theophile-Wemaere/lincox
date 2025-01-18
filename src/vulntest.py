@@ -580,5 +580,5 @@ def test_csrf(form:dict)->int:
         else:
             return 2
     else:
-        # not CSRF parameter found
+        # no CSRF parameter found
         return 1

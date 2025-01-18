@@ -1,34 +1,36 @@
 import html as htmllib
 
-def get_scan_info(attack_mode:str)->tuple:
+
+def get_scan_info(attack_mode: str) -> tuple:
     """
     return the scan mode and details
     """
 
     if attack_mode:
-        return "full scan mode","the scanner enumerates services on the target and search for vulnerabilities by simulating attacks"
+        return "full scan mode", "the scanner enumerates services on the target and search for vulnerabilities by simulating attacks"
     else:
-        return "enumeration only","the scanner only enumerates services on the target then exit"
+        return "enumeration only", "the scanner only enumerates services on the target then exit"
 
-def get_scope_info(scope:str)->tuple:
 
+def get_scope_info(scope: str) -> tuple:
     """
     return the scope and details on the scope
     """
 
     if scope == "full":
-        return "Full","scan for subdomains and try to find services on all port"
+        return "Full", "scan for subdomains and try to find services on all port"
     elif scope == "medium":
-        return "Medium","scan target for differents services on most used ports"
+        return "Medium", "scan target for differents services on most used ports"
     elif scope == "strict":
-        return "Strict","scan for subdomains and others services on found subdomains"
+        return "Strict", "scan for subdomains and others services on found subdomains"
 
-def html_report(self)->str:
+
+def html_report(self) -> str:
     """
     initialize a HTML report with the target address
     """
 
-    #region header section
+    # region header section
     html = """
 <!DOCTYPE html>
 <html lang="en">
@@ -51,6 +53,13 @@ def html_report(self)->str:
       .table-container {
         margin-top: 20px;
       }
+
+      .accordion-body table {
+        width: 100%;
+        word-wrap: break-word;  /* Ensures long text breaks within cells */
+        table-layout: fixed;    /* Makes the table take up all available width */
+      }
+
       .accordion-item {
         border: 1px solid #ced4da;
       }
@@ -58,6 +67,7 @@ def html_report(self)->str:
         background-color: #f8f9fa;
         color: #343a40;
       }
+
     </style>
   </head>
   <body>
@@ -72,13 +82,14 @@ def html_report(self)->str:
       <section>
         <h2 class="h4">Scan settings</h2>
         <ul class="list-group">"""
-    
-    #endregion
 
-    #region scan settings (mode,scope,ports)
-    scan_mode,scan_details = get_scan_info(self.attack_mode)
+    # endregion
+
+    # region scan settings (mode,scope,ports)
+    scan_mode, scan_details = get_scan_info(self.attack_mode)
     scope, scope_details = get_scope_info(self.scope)
-    ports = self.ports_args if self.ports_args not in ['-','all'] else 'all ports from 1 to 65535'
+    ports = self.ports_args if self.ports_args not in [
+        '-', 'all'] else 'all ports from 1 to 65535'
     html += f"""
           <li class="list-group-item">
             <strong>Start Time :</strong> Launched at {self.start.split(' ')[1]} on {self.start.split(' ')[0]}
@@ -95,14 +106,14 @@ def html_report(self)->str:
           <li class="list-group-item">
             <strong>Ports scanned :</strong> {ports}
           </li>"""
-    
+
     html += """
         </ul>
       </section>"""
-    
-    #endregion
 
-    #region services detected
+    # endregion
+
+    # region services detected
     if len(self.services) > 0:
         html += """
         <br>
@@ -125,7 +136,7 @@ def html_report(self)->str:
         for service in self.services:
             data = self.services[service]
             service_info = f"{data["name"]}/{data["product"]}"
-            
+
             if data["product"] == '':
                 service_info = data["name"]
 
@@ -151,10 +162,10 @@ def html_report(self)->str:
             </table>
         </section>"""
 
-    #endregion
+    # endregion
 
-    #region domains
-    
+    # region domains
+
     if hasattr(self, "domains"):
         html += f"""
         <!-- Detected Domains Section -->
@@ -164,12 +175,12 @@ def html_report(self)->str:
             <div class="accordion">
                 <div class="accordion-item">
                     <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                             data-bs-target="#collapseDomains" aria-expanded="false" aria-controls="collapseDomains">
                             View Detected Domains ({len(self.domains)})
                         </button>
                     </h2>
-                    <div id="collapseDomains" class="accordion-collapse collapse" aria-labelledby="headingDomains" 
+                    <div id="collapseDomains" class="accordion-collapse collapse" aria-labelledby="headingDomains"
                         data-bs-parent="#domainsAccordion">
                         <div class="accordion-body">
                             <table class="table table-bordered table-striped">
@@ -200,9 +211,9 @@ def html_report(self)->str:
             </div>
         </section>
         """
-    #endregion
-    
-    #region Crawled URLs
+    # endregion
+
+    # region Crawled URLs
     if len(self.crawled_urls) > 0:
         html += f"""
         <!-- Detected URLs Section -->
@@ -212,12 +223,12 @@ def html_report(self)->str:
             <div class="accordion">
                 <div class="accordion-item">
                     <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                             data-bs-target="#collapseCrawledURLs" aria-expanded="false" aria-controls="collapseCrawledURLs">
                             View Detected URLs ({len(self.crawled_urls)})
                         </button>
                     </h2>
-                    <div id="collapseCrawledURLs" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                    <div id="collapseCrawledURLs" class="accordion-collapse collapse" aria-labelledby="headingURLs"
                         data-bs-parent="#urlsAccordion">
                         <div class="accordion-body">
                             <table class="table table-bordered table-striped">
@@ -247,9 +258,9 @@ def html_report(self)->str:
             </div>
         </section>
         """
-    #endregion
+    # endregion
 
-    #region Fuzzed URLs
+    # region Fuzzed URLs
     if len(self.fuzzed_urls) > 0:
         html += f"""
         <!-- Detected URLs Section -->
@@ -259,12 +270,12 @@ def html_report(self)->str:
             <div class="accordion">
                 <div class="accordion-item">
                     <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                             data-bs-target="#collapseFuzzedURLs" aria-expanded="false" aria-controls="collapseFuzzedURLs">
                             View Detected URLs ({len(self.fuzzed_urls)})
                         </button>
                     </h2>
-                    <div id="collapseFuzzedURLs" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                    <div id="collapseFuzzedURLs" class="accordion-collapse collapse" aria-labelledby="headingURLs"
                         data-bs-parent="#urlsAccordion">
                         <div class="accordion-body">
                             <table class="table table-bordered table-striped">
@@ -294,9 +305,9 @@ def html_report(self)->str:
             </div>
         </section>
         """
-    #endregion
+    # endregion
 
-    #region Found Headers
+    # region Found Headers
     if len(self.found_headers) > 0:
         section = "collapseHeaders"
         html += f"""
@@ -307,12 +318,12 @@ def html_report(self)->str:
             <div class="accordion">
                 <div class="accordion-item">
                     <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                             data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
                             View Detected headers ({len(self.found_headers)})
                         </button>
                     </h2>
-                    <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                    <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs"
                         data-bs-parent="#urlsAccordion">
                         <div class="accordion-body">
                             <table class="table table-bordered table-striped">
@@ -326,7 +337,7 @@ def html_report(self)->str:
                                 <tbody>
         """
 
-        for header,value,url in self.found_headers:
+        for header, value, url in self.found_headers:
             html += f"""
                                     <tr>
                                         <td>{header}</td>
@@ -344,28 +355,28 @@ def html_report(self)->str:
             </div>
         </section>
         """
-    #endregion
+    # endregion
 
-    #region Found Data
+    # region Found Data
     if len(self.found_data) > 0:
         html += """
         <!-- Detected Data Section -->
         <section class="table-container">
             <h2 class="h4 mt-4">Interesting Data on Technologies used and/or credentials</h2>"""
 
-        #region CMS
+        # region CMS
         if len([x for x in self.found_data if x['type'] == 'CMS']) > 0:
             section = "collapseCMSFoundData"
             html += f"""
                 <div class="accordion">
                     <div class="accordion-item">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                                 data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
                                 View Detected CMS ({len([x for x in self.found_data if x['type'] == 'CMS'])})
                             </button>
                         </h2>
-                        <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                        <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs"
                             data-bs-parent="#urlsAccordion">
                             <div class="accordion-body">
                                 <table class="table table-bordered table-striped">
@@ -379,41 +390,40 @@ def html_report(self)->str:
                                     <tbody>
             """
 
-        for data in self.found_data:
-            if data['type'] != "CMS":
-                continue
-            html += f"""
-                                    <tr>
-                                        <td>{data['name']}</td>
-                                        <td>{htmllib.escape(data['line'])}</td>
-                                        <td><a href="{data['url']}">{data['url']}</a></td>
-                                    </tr>
-            """
+            for data in self.found_data:
+                if data['type'] != "CMS":
+                    continue
+                html += f"""
+                                        <tr>
+                                            <td>{data['name']}</td>
+                                            <td>{data['line']}</td>
+                                            <td><a href="{data['url']}">{data['url']}</a></td>
+                                        </tr>
+                """
 
-        html += """
-                                </tbody>
-                            </table>
+            html += """
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
-        """
-    #endregion
+            """
+        # endregion
 
-        #region Credentials
+        # region Credentials
         if len([x for x in self.found_data if x['type'] == 'credential']) > 0:
             section = "collapseCredentialsFoundData"
             html += f"""
                 <div class="accordion">
                     <div class="accordion-item">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                                 data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
                                 View Detected Credentials ({len([x for x in self.found_data if x['type'] == 'credential'])})
                             </button>
                         </h2>
-                        <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                        <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs"
                             data-bs-parent="#urlsAccordion">
                             <div class="accordion-body">
                                 <table class="table table-bordered table-striped">
@@ -433,7 +443,7 @@ def html_report(self)->str:
                 html += f"""
                                         <tr>
                                             <td>{data['name']}</td>
-                                            <td>{htmllib.escape(data['line'])}</td>
+                                            <td>{data['line']}</td>
                                             <td><a href="{data['url']}">{data['url']}</a></td>
                                         </tr>
                 """
@@ -445,23 +455,22 @@ def html_report(self)->str:
                         </div>
                     </div>
                 </div>
-            </section>
             """
-        #endregion
+        # endregion
 
-        #region Comments
+        # region Comments
         if len([x for x in self.found_data if x['type'] == 'other']) > 0:
             section = "collapseCommentsFoundData"
             html += f"""
                 <div class="accordion">
                     <div class="accordion-item">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                                 data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
                                 View Detected Comments ({len([x for x in self.found_data if x['type'] == 'other'])})
                             </button>
                         </h2>
-                        <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                        <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs"
                             data-bs-parent="#urlsAccordion">
                             <div class="accordion-body">
                                 <table class="table table-bordered table-striped">
@@ -481,7 +490,7 @@ def html_report(self)->str:
                 html += f"""
                                         <tr>
                                             <td>{data['name']}</td>
-                                            <td>{htmllib.escape(data['line'])}</td>
+                                            <td>{data['line']}</td>
                                             <td><a href="{data['url']}">{data['url']}</a></td>
                                         </tr>
                 """
@@ -493,13 +502,13 @@ def html_report(self)->str:
                         </div>
                     </div>
                 </div>
-            </section>
             """
-        #endregion
+        # endregion
 
-    #endregion
+        html += "</section>"
+    # endregion
 
-    #region Found parameter
+    # region Found parameter
     if len(self.url_parameters) > 0:
         section = "collapseParameters"
         html += f"""
@@ -510,12 +519,12 @@ def html_report(self)->str:
             <div class="accordion">
                 <div class="accordion-item">
                     <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                             data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
                             View Detected parameters ({len(self.url_parameters)})
                         </button>
                     </h2>
-                    <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                    <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs"
                         data-bs-parent="#urlsAccordion">
                         <div class="accordion-body">
                             <table class="table table-bordered table-striped">
@@ -531,7 +540,7 @@ def html_report(self)->str:
                                 <tbody>
         """
 
-        for url,name,response,size,method,type,origin in self.url_parameters:
+        for url, name, response, size, method, type, origin in self.url_parameters:
             html += f"""
                                     <tr>
                                         <td>{name}</td>
@@ -551,9 +560,9 @@ def html_report(self)->str:
             </div>
         </section>
         """
-        #endregion
-    
-    #region Found XSS
+        # endregion
+
+    # region Found XSS
     if len(self.found_xss) > 0:
         section = "collapseXSS"
         html += f"""
@@ -564,12 +573,12 @@ def html_report(self)->str:
             <div class="accordion">
                 <div class="accordion-item">
                     <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                             data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
                             View Detected parameters ({len(self.found_xss)})
                         </button>
                     </h2>
-                    <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs" 
+                    <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs"
                         data-bs-parent="#urlsAccordion">
                         <div class="accordion-body">
                             <table class="table table-bordered table-striped">
@@ -583,7 +592,7 @@ def html_report(self)->str:
                                 <tbody>
         """
 
-        for url,parameter,method,type,confidence in self.found_xss:
+        for url, parameter, method, type, confidence in self.found_xss:
             html += f"""
                                     <tr>
                                         <td>{type}</td>
@@ -601,7 +610,7 @@ def html_report(self)->str:
             </div>
         </section>
         """
-        #endregion
+        # endregion
 
     html += """
     <section class="accordion mt-4" id="additional-findings">
