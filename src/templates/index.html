@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lincox Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io/client-dist/socket.io.min.js"></script>
+    <script>
+        function addHeader() {
+            const header = prompt("Enter a header (format: Key: Value):");
+            if (header) {
+                const headerList = document.getElementById("headersList");
+                const listItem = document.createElement("li");
+                listItem.textContent = header;
+                headerList.appendChild(listItem);
+            }
+        }
+    </script>
+</head>
+<body>
+<div class="container mt-4">
+    <h2 class="text-center mb-4">Lincox Configuration Dashboard</h2>
+    <div class="accordion" id="configAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="configHeading">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#configMenu" aria-expanded="true" aria-controls="configMenu">
+                    Configuration Menu
+                </button>
+            </h2>
+            <div id="configMenu" class="accordion-collapse collapse show" aria-labelledby="configHeading">
+                <div class="accordion-body">
+                    <form onsubmit="submitScan()">
+                        <!-- Target Input -->
+                        <div class="mb-3">
+                            <label for="target" class="form-label"><b>Target (IP or domain)</b></label>
+                            <input type="text" class="form-control" id="target" name="target">
+                        </div>
+
+                        <div class="row">
+                            <!-- Mode Selection -->
+                            <div class="col-4">
+                                <label for="mode" class="form-label"><b>Mode</b></label>
+                                <select class="form-select" id="mode" name="mode">
+                                    <option value="enum">Enumeration Only</option>
+                                    <option value="full" selected>Full</option>
+                                </select>
+                            </div>
+
+                            <!-- Scope Selection -->
+                            <div class="col-4">
+                                <label for="scope" class="form-label"><b>Scope</b></label>
+                                <select class="form-select" id="scope" name="scope">
+                                    <option value="strict" selected>Strict</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="full">Full</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <br>
+
+                        <!-- Attack Flags -->
+                        <div class="mb-3">
+                            <label class="form-label"><b>Attacks</b></label>
+                            <div class="row">
+                                <div class="col-4">
+                                    <input type="checkbox" name="attacks" value="X" checked> XSS<br>
+                                    <input type="checkbox" name="attacks" value="L" checked> LFI<br>
+                                    <input type="checkbox" name="attacks" value="S" checked> SQL Injection<br>
+                                </div>
+                                <div class="col-4">
+                                    <input type="checkbox" name="attacks" value="O" checked> Open Redirect<br>
+                                    <input type="checkbox" name="attacks" value="B" checked> Brute Force<br>
+                                    <input type="checkbox" name="attacks" value="R" checked> SSRF<br>
+                                </div>
+                                <div class="col-4">
+                                    <input type="checkbox" name="attacks" value="M" checked> Misconfiguration<br>
+                                    <!--<input type="checkbox" name="attacks" value="W" checked> WordPress Scan<br>-->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ports Input -->
+                        <div class="mb-3">
+                            <label for="ports" class="form-label"><b>Ports (Default 80,443,8000,8080,8081,8443)</b></label>
+                            <input type="text" class="form-control" id="ports" name="ports" placeholder="Use CSV (80,8080,8443) or range (10-1000)">
+                        </div>
+
+                        <div class="row">
+                            <!-- Force Scan -->
+                            <div class="col-4">
+                                <label class="form-label"><b>Force scan</b></label><br>
+                                <input type="radio" name="force" value="yes"> Yes<br>
+                                <input type="radio" name="force" value="no" checked> No<br>
+                            </div>
+
+                            <!-- Subdomain enumeration -->
+                            <div class="col-4">
+                                <label class="form-label"><b>Enumerate subdomains (for domain target only)</b></label><br>
+                                <input type="radio" name="subdomains" value="yes"> Yes<br>
+                                <input type="radio" name="subdomains" value="no" checked> No<br>
+                            </div>
+
+                            <!-- Paraminer Skipping -->
+                            <div class="col-4">
+                                <label class="form-label"><b>Skip Paraminer</b></label><br>
+                                <input type="radio" name="paraminer" value="yes"> Yes<br>
+                                <input type="radio" name="paraminer" value="no" checked> No<br>
+                            </div>
+                        </div>
+
+                        <br>
+
+                        <!-- Headers Input -->
+                        <div class="mb-3">
+                            <label for="headers" class="form-label"><b>Add Headers</b></label>
+                            <ul id="headersList"></ul>
+                            <button type="button" class="btn btn-secondary" onclick="addHeader()">Add Header</button>
+                        </div>
+
+                        <!-- Output Options -->
+                        <div class="mb-3">
+                            <label class="form-label"><b>Output Options</b></label><br>
+                            <input type="checkbox" name="output" value="csv"> CSV<br>
+                            <input type="checkbox" name="output" value="json"> JSON<br>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-primary">Lauch Scan</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Real-Time Log Output -->
+    <div class="mt-4">
+        <h4>Real-Time Output</h4>
+        <!--<textarea id="logOutput" class="form-control" rows="10" readonly></textarea>-->
+        <div id="logOutput" class="form-control" style="white-space: pre-wrap; overflow-y: auto; height: 30rem;resize:vertical;"></div>
+        <br>
+        <div class="row">
+            <div class="col-4">
+                <input id="toggleDebug" type="checkbox" name="output"> Show Debug Messages<br>
+            </div>
+            <div class="col-4">
+                <button type="button" class="btn btn-danger" onclick="stopScan()">Stop Scan</button>
+            </div>
+        </div>
+
+        <br>
+
+    </div>
+</div>
+
+<script>
+
+    function stopScan() {
+        fetch('/stop_scan', {
+            method: 'POST'
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log('Scan stoped successfully!');
+            } else {
+                console.error('Error stopping scan:', response.status);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    document.getElementById('toggleDebug').addEventListener('change', function() {
+        const debugLines = document.querySelectorAll('#debugLine');
+        
+        debugLines.forEach((line, index) => {
+            if (line.style.display === 'none') {
+                line.style.display = 'block';
+            } else {
+                line.style.display = 'none';
+            }
+        });
+    });
+
+    function ansiToHtml(text) {
+        const ansiStyles = {
+            30: 'color: black;',             // black
+            31: 'color: red;',               // red
+            32: 'color: green;',             // green
+            33: 'color: yellow;',            // yellow
+            34: 'color: blue;',              // blue
+            35: 'color: magenta;',           // magenta
+            36: 'color: cyan;',              // cyan
+            37: 'color: white;',             // white
+            90: 'color: lightgray;',         // light_grey
+            91: 'color: lightcoral;',        // light_red
+            92: 'color: lightgreen;',        // light_green
+            93: 'color: lightyellow;',       // light_yellow
+            94: 'color: lightblue;',         // light_blue
+            95: 'color: lightpink;',         // light_magenta
+            96: 'color: lightcyan;',         // light_cyan
+            40: 'background-color: black;', // on_black
+            41: 'background-color: red;',   // on_red
+            42: 'background-color: green;', // on_green
+            43: 'background-color: yellow;', // on_yellow
+            44: 'background-color: blue;',  // on_blue
+            45: 'background-color: magenta;', // on_magenta
+            46: 'background-color: cyan;',  // on_cyan
+            107: 'background-color: grey;', // on_white
+            100: 'background-color: black;', // on_black
+            101: 'background-color: red;',   // on_red
+            102: 'background-color: green;', // on_green
+            103: 'background-color: yellow;', // on_yellow
+            104: 'background-color: blue;',  // on_blue
+            105: 'background-color: magenta;', // on_magenta
+            106: 'background-color: cyan;',  // on_cyan
+            107: 'background-color: white;', // on_white
+            108: 'background-color: lightgray;', // on_light_grey
+            109: 'background-color: darkgray;', // on_dark_grey
+            // Attributes
+            1: 'font-weight: bold;',         // bold
+            2: 'font-weight: lighter;',      // dark (fainter text)
+            4: 'text-decoration: underline;', // underline
+            5: 'text-decoration: blink;',    // blink
+            7: 'filter: invert(100%);',      // reverse (inverts colors)
+            8: 'visibility: hidden;',        // concealed
+            9: 'text-decoration: line-through;', // strike
+            0: ''                            // Reset (no style)
+        };
+
+
+        const ansiRegex = /\x1b\[([0-9]+)m/g;
+
+        spanCounter = 0;
+
+        let formattedText = text.replace(ansiRegex, (match, p1) => {
+            const style = ansiStyles[p1];
+            if(style) {
+                spanCounter += 1;
+                return `<span style="${style}">`;
+            } else {
+                spans = '</span>'.repeat(spanCounter) 
+                spanCounter = 0;
+                return spans
+            }
+        });
+
+        return formattedText;
+    }
+
+    function submitScan() {
+
+        event.preventDefault();
+
+        document.getElementById("logOutput").innerHTML = "";
+
+        // Get form values
+        const target = document.getElementById('target').value;
+        const mode = document.getElementById('mode').value;
+        const scope = document.getElementById('scope').value;
+        const attacks = Array.from(document.querySelectorAll('input[name="attacks"]:checked')).map(checkbox => checkbox.value);
+        const ports = document.getElementById('ports').value;
+        const force = document.querySelector('input[name="force"]:checked').value;
+        const subdomains = document.querySelector('input[name="subdomains"]:checked').value;
+        const paraminer = document.querySelector('input[name="paraminer"]:checked').value;
+        const headers = [];
+        document.querySelectorAll('#headersList li').forEach(li => {
+            const [key, value] = li.textContent.split(': ');
+            headers.push({ key, value });
+        });
+        const output = Array.from(document.querySelectorAll('input[name="output"]:checked')).map(checkbox => checkbox.value);
+
+        // Create JSON body
+        const data = {
+            target: target,
+            mode: mode,
+            scope: scope,
+            attacks: attacks,
+            ports: ports,
+            force: force,
+            subdomains: subdomains,
+            paraminer: paraminer,
+            headers: headers,
+            output: output
+        };
+
+        // Send POST request
+        fetch('/launch_scan', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log('Scan launched successfully!');
+                var accordionCollapse = new bootstrap.Collapse(document.getElementById('configMenu'), {
+                    toggle: false
+                });
+                accordionCollapse.hide();   
+                const socket = io();
+                const logOutput = document.getElementById("logOutput");
+                var lastLine = ""
+
+                socket.on("file_update", function (data) {
+                    line = ansiToHtml(data.content);
+
+                    if(line.search("DEBUG") != -1) {
+                        line = `<span id="debugLine" style="display:none;">${line}</span>`
+                    }
+                    if(line !== lastLine) {
+                        logOutput.innerHTML += line;
+                    }
+                    lastLine = line;
+                    logOutput.scrollTop = logOutput.scrollHeight;
+
+                    if(line.search("Created HTML report") != -1) {
+                        socket.disconnect();
+                        window.open('/show_report', '_blank');
+                    }               
+                });
+            } else {
+                console.error('Error launching scan:', response.status);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // Prevent form submission on Enter key
+    document.addEventListener("DOMContentLoaded", function () {
+    const form = document.querySelector("form");
+    form.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+            }
+        });
+    });
+</script>
+</body>
+</html>

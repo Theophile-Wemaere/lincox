@@ -3,7 +3,6 @@ venv/
 *.pkl
 *_subdomains.txt
 test/
-*.html
 *.json
 output/
 tools/
