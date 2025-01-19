@@ -50,6 +50,13 @@ Default : 80,443,8000,8080,8081,8443\n """)
     parser.add_argument("-f","--force", action="store_true" ,dest="force", help="Force enumeration if target seems down (no pingback)")
     parser.add_argument("-sd","--subdomains", action="store_true" ,dest="subdomains", help="Perform subdomain enumeration")
     parser.add_argument("-H", "--headers", dest="headers", action="append", help="Specify a header to be included. Can be used multiple times.")
+    parser.add_argument("--skip-paraminer", action="store_true", dest="skip_paraminer" , help="Skip parameter bruteforcing")
+
+    # output options
+    parser.add_argument("-oN", nargs='?', dest="normal_output" ,const='', help="Output script to given directory")
+    parser.add_argument("-oC", nargs='?', dest="csv_output" ,const='', help="Output script in CSVs to given directory")
+    parser.add_argument("-oJ", nargs='?', dest="json_output" ,const='', help="Output script in JSON to given directory")
+    parser.add_argument("-oA", nargs='?', dest="all_output" ,const='', help="Output script to normal,CSV and JSON in given directory")
 
     # debug options
     parser.add_argument("-d","-v","--verbose","--debug", action="store_true" ,dest="debug", help="Debug/Verbose mode")
@@ -127,7 +134,11 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
             target.enumerate_web_services()
 
-            target.search_parameters()
+            skip = False
+            if args.skip_paraminer:
+                skip = True
+            
+            target.search_parameters(skip)
 
             with open("target.pkl",'wb') as file:
                 pickle.dump(target,file)

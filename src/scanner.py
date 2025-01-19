@@ -375,7 +375,7 @@ class Target:
             #     for domain in alives:
             #         file.write(domain+"\n")
 
-    def search_parameters(self):
+    def search_parameters(self,skip_paraminer=False):
         """
         try to bruteforce for common POST and GET parameters on web root
         """
@@ -387,24 +387,25 @@ class Target:
         wordlist = "data/burp-parameter-names.txt"
         self.url_parameters = []
 
-        for service in self.services:
-            data = self.services[service]
-            if data["name"].find("http") != -1:
-                protocol = "http"
-                if hasattr(self, 'protocol'):
-                    protocol = self.protocol
+        if not skip_paraminer:
+            for service in self.services:
+                data = self.services[service]
+                if data["name"].find("http") != -1:
+                    protocol = "http"
+                    if hasattr(self, 'protocol'):
+                        protocol = self.protocol
 
-                url = f"{protocol}://{self.address}:{service}"
+                    url = f"{protocol}://{self.address}:{service}"
 
-                if service == 80:
-                    url = f"http://{self.address}"
-                elif service == 443:
-                    url = f"https://{self.address}"
+                    if service == 80:
+                        url = f"http://{self.address}"
+                    elif service == 443:
+                        url = f"https://{self.address}"
 
-                results = wu.ParaMiner(url, wordlist).run()
-                for result in results:
-                    if result not in self.url_parameters:
-                        self.url_parameters.append(result)
+                    results = wu.ParaMiner(url, wordlist).run()
+                    for result in results:
+                        if result not in self.url_parameters:
+                            self.url_parameters.append(result)
 
         for url in self.all_urls:
             if url[0].find('?') != -1:
@@ -449,8 +450,6 @@ class Target:
 
         self.found_xss = []
 
-        print()
-
         if len(self.url_parameters) == 0:
             toolbox.tprint(
                 "No GET parameters found on target, skipping XSS detection")
@@ -491,8 +490,6 @@ class Target:
 
         self.found_fi = []
 
-        print()
-
         if len(self.params_to_test) == 0:
             toolbox.tprint(
                 "No parameters found on target, skipping LFI detection")
@@ -523,8 +520,6 @@ class Target:
         """
 
         self.found_sqli = []
-
-        print()
 
         if len(self.params_to_test) == 0:
             toolbox.tprint(
@@ -578,8 +573,6 @@ class Target:
 
         self.found_openredirect = []
 
-        print()
-
         if len(self.url_parameters) == 0:
             toolbox.tprint(
                 "No GET parameters found on target, skipping open redirect detection")
@@ -617,8 +610,6 @@ class Target:
 
         self.found_credentials = []
 
-        print()
-
         forms_to_test = []
         for form in self.forms_list:
             is_login = False
@@ -646,11 +637,18 @@ class Target:
             "security.php"  # DVWA skipping
         ]
 
+        url_scanned = []
+
         for form in forms_to_test:
             skip = False
             for entry in to_skip_url:
                 if entry in form['url']:
                     skip = True
+
+            if form['url'] in url_scanned:
+                skip = True
+            else:
+                url_scanned.append(form['url'])
 
             if skip:
                 continue
@@ -671,8 +669,6 @@ class Target:
         """
 
         self.found_ssrf = []
-
-        print()
 
         if len(self.params_to_test) == 0:
             toolbox.tprint(

@@ -315,6 +315,7 @@ def test_default_credentials(form:dict)->dict:
     counter = 0
     is_first = True
     default_size = 0
+    default_redirect = None
     previous_page = None
 
     credentials_list = []
@@ -323,10 +324,29 @@ def test_default_credentials(form:dict)->dict:
     csrf_param = None
     csrf_index = None
     session = requests.Session()
+
+    possible_csrf_params = [
+        "csrf_token",
+        "csrf",
+        "_csrf",
+        "_token",
+        "X-CSRF-Token",
+        "user_token",
+        "token",
+        "authenticity_token",
+        "csrfmiddlewaretoken",
+        "security_token",
+        "xsrf_token",
+        "request_token",
+        "csrfParam",
+        "session_token",
+        "csrfToken",
+        "x-csrf-token"
+    ]
     
     c = 0
     for param in form['parameters']:
-        if param['name'].lower().find('csrf') != -1:
+        if param['name'].lower() in possible_csrf_params:
             toolbox.debug(f"Form at {form['url']} use a CSRF parameter : {param['name']}")
             has_csrf = True
             csrf_param = param['name']
@@ -349,6 +369,7 @@ def test_default_credentials(form:dict)->dict:
 
     with alive_bar(len(credentials_list), title=toolbox.get_header("ATTACK")+f"Trying default credentials on {form['url']}", bar=None, enrich_print=False) as bar:
         for username,password in credentials_list:
+
             if form['method'].lower() == 'get':
                 parameters = "?"
                 for param in form['parameters']:
@@ -403,6 +424,9 @@ def test_default_credentials(form:dict)->dict:
                             def_parameters[param['name']] = param['value']
                     r = session.post(form['url'],data=def_parameters,headers=get_headers(),allow_redirects=False)
                     default_size = len(r.text.split(' '))
+                    if default_size == 1:
+                        if 300 <= r.status_code < 400:
+                            default_redirect = r.headers["Location"]
                     toolbox.debug(f"Default response for form at {form['url']} : {default_size} words")
                     previous_page = r.text
 
@@ -413,15 +437,13 @@ def test_default_credentials(form:dict)->dict:
                 r = session.post(form['url'],data=parameters,headers=get_headers(),allow_redirects=False)
                 previous_page = r.text
 
-                if len(r.text.split(' ')) != default_size:
+                if len(r.text.split(' ')) != default_size or (default_redirect and default_redirect != r.headers['Location']):
                     valid.append((username,password))
+                    # restart Session
+                    session = requests.Session()
+                    r = session.get(form['url'],headers=get_headers())
                     if has_csrf:
-                        break
-                    # # restart Session
-                    # session = requests.Session()
-                    # r = session.get(form['url'],headers=get_headers())
-                    # if has_csrf:
-                    #     form = update_csrf(r,form)
+                        form = update_csrf(r,form)
 
             bar()
     
@@ -540,6 +562,7 @@ def test_csrf(form:dict)->int:
         "_csrf",
         "_token",
         "X-CSRF-Token",
+        "user_token",
         "token",
         "authenticity_token",
         "csrfmiddlewaretoken",
