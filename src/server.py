@@ -127,7 +127,7 @@ def prepare_scan(data:dict):
         if SUBDOMAINS_ENUM:
                 target.enumerate_subdomains()
                 if not SCOPE == "full":
-                    REPORT_PATH = target.create_report()
+                    REPORT_PATH = target.create_report(json_dir,csv_dir)
                     return
 
         target.search_services()

@@ -315,11 +315,13 @@ def test_default_credentials(form:dict)->dict:
     counter = 0
     is_first = True
     default_size = 0
+    default_size_empty = 0
     default_redirect = None
     previous_page = None
 
     credentials_list = []
     valid = []
+    potential = []
     has_csrf = False
     csrf_param = None
     csrf_index = None
@@ -347,7 +349,7 @@ def test_default_credentials(form:dict)->dict:
     c = 0
     for param in form['parameters']:
         if param['name'].lower() in possible_csrf_params:
-            toolbox.debug(f"Form at {form['url']} use a CSRF parameter : {param['name']}")
+            toolbox.aprint(f"Form at {form['url']} use a CSRF parameter : {param['name']}")
             has_csrf = True
             csrf_param = param['name']
             csrf_index = c
@@ -428,27 +430,43 @@ def test_default_credentials(form:dict)->dict:
                         if 300 <= r.status_code < 400:
                             default_redirect = r.headers["Location"]
                     toolbox.debug(f"Default response for form at {form['url']} : {default_size} words")
-                    previous_page = r.text
+                    previous_page = r.text 
 
                     if has_csrf:
                         form = update_csrf(r,form)
+
+                    for param in def_parameters:
+                        if def_parameters[param] == "lincox@gmail.com":
+                            def_parameters[param] = ""
+
+                    r = session.post(form['url'],data=def_parameters,headers=get_headers(),allow_redirects=False)
+                    default_size_empty = len(r.text.split(' '))
+                    toolbox.debug(f"Default response for empty form at {form['url']} : {default_size_empty} words")
+                    
 
                 request_valid = False
                 r = session.post(form['url'],data=parameters,headers=get_headers(),allow_redirects=False)
                 previous_page = r.text
+                response_size = len(r.text.split(' '))
 
-                if len(r.text.split(' ')) != default_size or (default_redirect and default_redirect != r.headers['Location']):
-                    valid.append((username,password))
-                    # restart Session
-                    session = requests.Session()
-                    r = session.get(form['url'],headers=get_headers())
-                    if has_csrf:
-                        form = update_csrf(r,form)
+                if (response_size != default_size and response_size != default_size_empty) or (default_redirect and "Location" in r.headers and default_redirect != r.headers['Location']):
+                    
+                    if default_size != default_size_empty and (username == "" or password == ""):
+                        toolbox.debug(f"Possible valid credential on {form['url']} : {username} : {password}")
+                        potential.append((form['url'],username,password))
+                    else:
+                        valid.append((username,password))
+                        # restart Session
+                        session = requests.Session()
+                        r = session.get(form['url'],headers=get_headers())
+                        toolbox.debug(f"Found valid credential on {form['url']} : {username} : {password}, length {response_size}")
+                        if has_csrf:
+                            form = update_csrf(r,form)
 
             bar()
     
     if len(valid) > 0:
-        return valid
+        return valid, potential
     else:
         return None
 

@@ -259,10 +259,10 @@ class Fuzzer:
         except KeyboardInterrupt:
             toolbox.warn(f"Keyboard interrupt detected, skipping Fuzzer on {self.address}",start='\n')
             self.STOP = True
-            return []
+            return self.fuzzed_urls, self.forms_list
         except Exception as e:
             print(e)
-            return []
+            return self.fuzzed_urls, self.forms_list
 
         for url in results:
             if url not in self.fuzzed_urls:

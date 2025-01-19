@@ -173,7 +173,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
             if SUBDOMAINS_ENUM:
                 target.enumerate_subdomains()
-                target.create_report()
+                target.create_report(json_dir,csv_dir)
                 if not SCOPE == "full":
                     exit(0)
 

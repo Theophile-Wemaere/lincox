@@ -24,6 +24,8 @@ class Target:
         self.scope = scope
         self.ports_list = [80, 443, 8000, 8080, 8081, 8443]
         self.ports_args = ",".join(list(map(str, self.ports_list)))
+        self.crawled_urls = []
+        self.fuzzed_urls  =[]
         self.override_port = False
         self.found_data = []
         self.found_headers = []
@@ -35,6 +37,7 @@ class Target:
         self.found_openredirect = []
         self.found_ssrf = []
         self.found_credentials = []
+        self.potential_credentials = []
         self.found_misconf = []
         self.params_to_test = []
         self.services = []
@@ -565,8 +568,9 @@ class Target:
             for url, parameters, method in self.params_to_test:
                 results = vt.test_sqli(command, url, parameters, method)
                 if results:
+                    msgs.append(f"SQL injection detected on {url} with {len(results)} methods")
                     for result in results:
-                        msgs.append(f"SQL injection detected on {url} with parameter {result[2]} : {result[3]}")
+                        toolbox.debug(f"SQL injection detected on {url} with parameter {result[2]} : {result[3]}")
                         self.found_sqli.append((url,result))
                 bar()
 
@@ -620,27 +624,6 @@ class Target:
         """
 
         self.found_credentials = []
-
-        forms_to_test = []
-        for form in self.forms_list:
-            is_login = False
-            for param in form['parameters']:
-                param = param['name'].lower()
-                if param.find('password') != -1 or param.find('user') != -1 or param.find('email') != -1 or param.find('passwd') != -1:
-                    is_login = True
-            if is_login:
-                forms_to_test.append(form)
-
-        if len(forms_to_test) == 0:
-            toolbox.tprint(
-                "No login forms found on target, skipping authentication attack")
-
-        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...", end='\r')
-        time.sleep(5)
-        print(' '*72, end='\r')
-
-        toolbox.aprint(f"Starting brute-forcing on {len(forms_to_test)} forms")        
-
         to_skip_url = [
             "register",
             "signup",
@@ -650,13 +633,37 @@ class Target:
             "security.php"  # DVWA skipping
         ]
 
+        forms_to_test = []
+        for form in self.forms_list:
+            is_login = False
+            for param in form['parameters']:
+                param = param['name'].lower()
+                if param.find('password') != -1 or param.find('user') != -1 or param.find('email') != -1 or param.find('passwd') != -1:
+                    is_login = True
+            if is_login:
+                skip = False
+                for entry in to_skip_url:
+                    if entry in form['url']:
+                        skip = True
+                
+                if not skip:
+                    forms_to_test.append(form)
+
+        if len(forms_to_test) == 0:
+            toolbox.tprint(
+                "No login forms found on target, skipping authentication attack")
+
+        toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...", end='\r')
+        time.sleep(5)
+        print(' '*72, end='\r')     
+
         url_scanned = []
+
+        toolbox.aprint(f"Starting brute-forcing on {len(forms_to_test)} forms")   
 
         for form in forms_to_test:
             skip = False
-            for entry in to_skip_url:
-                if entry in form['url']:
-                    skip = True
+            
 
             if form['url'] in url_scanned:
                 skip = True
@@ -665,12 +672,13 @@ class Target:
 
             if skip:
                 continue
-
+                
             result = vt.test_default_credentials(form)
             if result:
-                for username, password in result:
-                    toolbox.vprint(f"Possible valid credential : {colored(username, "green", 
-                        attrs=["bold"])} : {colored(password, "green", attrs=["bold"])}", level=3)
+                valid, potential = result
+                self.potential_credentials += potential
+                for username, password in valid:
+                    toolbox.vprint(f"Possible valid credential : {colored(username, "green", attrs=["bold"])} : {colored(password, "green", attrs=["bold"])}", level=3)
                     self.found_credentials.append((form['url'],username,password))
         
         if len(self.found_credentials) == 0:
@@ -810,9 +818,11 @@ class Target:
                 bar()
 
         for msg in msgs:
-            toolbox.vprint(msg,level=1)
+            toolbox.debug(msg)
         if len(msgs) == 0:
             toolbox.tprint("No CSRF misconfigurations found")
+        else:
+            toolbox.vprint(f"Found {len(msgs)} CSRF misconfigured forms",level=1)
 
     def create_report(self,json_dir,csv_dir):
         """
