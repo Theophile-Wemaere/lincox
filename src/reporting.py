@@ -625,7 +625,7 @@ def html_report(self) -> str:
                         <h2 class="accordion-header">
                             <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                                 data-bs-target="#{section}" aria-expanded="false" aria-controls="{section}">
-                                View Detected Forms ({len(self.url_parameters)})
+                                View Detected Forms ({len(self.forms_list)})
                             </button>
                         </h2>
                         <div id="{section}" class="accordion-collapse collapse" aria-labelledby="headingURLs"

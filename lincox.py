@@ -54,7 +54,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
     # output options
     parser.add_argument("-oN", nargs='?', dest="normal_output" ,const='', help="Output script to given directory")
-    parser.add_argument("-oC", nargs='?', dest="csv_output" ,const='', help="Output script in CSVs to given directory")
+    parser.add_argument("-oC", nargs='?', dest="csv_output" ,const='', help="Output script in CSV (only found URL) to given directory")
     parser.add_argument("-oJ", nargs='?', dest="json_output" ,const='', help="Output script in JSON to given directory")
     parser.add_argument("-oA", nargs='?', dest="all_output" ,const='', help="Output script to normal,CSV and JSON in given directory")
 
@@ -105,6 +105,42 @@ Default : 80,443,8000,8080,8081,8443\n """)
                 value = value[1:]
             webutils.HEADERS[name] = value
 
+    # prepare file output
+    normal_output = False
+    csv_output = False
+    json_output = False
+    normal_dir = ""
+    csv_dir = ""
+    json_dir = ""
+
+    if args.normal_output:
+        normal_output = True
+        normal_dir = args.normal_output
+    if args.csv_output:
+        csv_output = True
+        csv_dir = args.csv_output
+    if args.json_output:
+        json_output = True
+        json_dir = args.json_output
+
+    if args.all_output:
+        normal_output = True
+        normal_dir = args.all_output
+        csv_output = True
+        csv_dir = args.all_output
+        json_output = True
+        json_dir = args.all_output
+
+    if normal_output and (not os.path.exists(normal_dir) or not os.path.isdir(normal_dir)):
+        print(f"Error, {normal_dir} doesn't exist or is not a directory")
+        exit(1)
+    if csv_output and (not os.path.exists(csv_dir) or not os.path.isdir(csv_dir)):
+        print(f"Error, {csv_dir} doesn't exist or is not a directory")
+        exit(1)
+    if json_output and (not os.path.exists(json_dir) or not os.path.isdir(json_dir)):
+        print(f"Error, {csv_dir} doesn't exist or is not a directory")
+        exit(1)
+    
     if args.debug:
         toolbox.set_debug(True)
 
@@ -113,6 +149,10 @@ Default : 80,443,8000,8080,8081,8443\n """)
 
     if args.target:
         SHOW_HELP = False
+
+        if normal_output:
+            toolbox.log_to_dir(normal_dir,args.target.replace(':','_').replace('/',''))
+
 
         target = scanner.Target(args.target,ATTACK_MODE,FORCE,SCOPE)
 
@@ -150,7 +190,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
         
         if not ATTACK_MODE:
             target.attack_mode = False
-            target.create_report()
+            target.create_report(json_dir,csv_dir)
             exit(0)
 
         if 'X' in FLAGS:
@@ -186,7 +226,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
             pass
         # target.wp_scan()
 
-        target.create_report()
+        target.create_report(json_dir,csv_dir)
 
         with open("target.pkl",'wb') as file:
             pickle.dump(target,file)

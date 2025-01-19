@@ -1,14 +1,23 @@
 from termcolor import colored
 from datetime import datetime
 import lincox as main
+import os
 
 DEBUG = False
+FILENAME = None
 
 def set_debug(status):
 
     global DEBUG
     DEBUG = status
     print(colored("DEBUG = True","black","on_red",attrs=["bold"]))
+
+def log_to_dir(directory,filename):
+
+    global FILENAME
+    timestamp = datetime.now().strftime('_%Y-%m-%d_%H_%M')
+    FILENAME = os.path.join(directory,filename+f'{timestamp}.lincox')
+    print(colored(f"Logging script output to {FILENAME}","black","on_green",attrs=["bold"]))
 
 def print_banner():
     banner = """
@@ -33,39 +42,49 @@ def exit_error(msg,code):
 
     print()
     print(get_header("ERROR")+msg)
+
+    if FILENAME:
+        with open(FILENAME,"a") as file:
+            file.write(get_header("ERROR")+msg+'\n')
+
     exit(code)
 
-def get_header(type:str,show_timestamp=True)->str:
+def get_header(header_type:str,show_timestamp=True,uncolored=False)->str:
     """
     get timestamp and type header
     """
 
     timestamp_header = ''
+    header = None
     if show_timestamp:
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         timestamp_header = '[' + colored(timestamp,"blue") + '] '
+        if uncolored:
+            timestamp_header = '[' + timestamp + '] '
 
-    if type == "DEBUG":
-        return timestamp_header +  '['+colored("DEBUG",attrs=["bold"])+'] '
+    if header_type == "DEBUG":
+        header = timestamp_header +  '['+colored("DEBUG",attrs=["bold"])+'] '
 
-    if type == "INFO":
-        return timestamp_header + '['+colored("INFO","green")+'] '
+    if header_type == "INFO":
+        header = timestamp_header + '['+colored("INFO","green")+'] '
 
-    if type == "ATTACK":
-        return timestamp_header + '['+colored("ATTACK","light_red",attrs=["bold"])+'] '
+    if header_type == "ATTACK":
+        header = timestamp_header + '['+colored("ATTACK","light_red",attrs=["bold"])+'] '
 
-    if type == "WARNING":
-        return timestamp_header + '['+colored("WARNING","black","on_light_yellow")+'] '
+    if header_type == "WARNING":
+        header = timestamp_header + '['+colored("WARNING","black","on_light_yellow")+'] '
 
-    if type == "ERROR":
-        return timestamp_header + '['+colored("ERROR","yellow","on_red")+'] '
+    if header_type == "ERROR":
+        header = timestamp_header + '['+colored("ERROR","yellow","on_red")+'] '
 
-    if type == "VULN1":
-        return timestamp_header + '['+colored("LOW","black","on_blue",attrs=["bold"])+'] '
-    if type == "VULN2":
-        return timestamp_header + '['+colored("MEDIUM","black","on_yellow",attrs=["bold"])+'] '
-    if type == "VULN3":
-        return timestamp_header + '['+colored("HIGH","black","on_light_red",attrs=["bold"])+'] '
+    if header_type == "VULN1":
+        header = timestamp_header + '['+colored("LOW","black","on_blue",attrs=["bold"])+'] '
+    if header_type == "VULN2":
+        header = timestamp_header + '['+colored("MEDIUM","black","on_yellow",attrs=["bold"])+'] '
+    if header_type == "VULN3":
+        header = timestamp_header + '['+colored("HIGH","black","on_light_red",attrs=["bold"])+'] '
+
+    return header
 
 def debug(msg):
     """
@@ -76,6 +95,10 @@ def debug(msg):
         return
 
     print(get_header("DEBUG")+msg)
+    
+    if FILENAME:
+        with open(FILENAME,"a") as file:
+            file.write(get_header("DEBUG")+msg+'\n')
 
 def tprint(*args,start='',end='\n'):
     """
@@ -84,6 +107,10 @@ def tprint(*args,start='',end='\n'):
     print(start,end='')
     print(get_header("INFO")+" ".join(map(str, args)),end='')
     print(end,end='')
+
+    if FILENAME and end != '\r':
+        with open(FILENAME,"a") as file:
+            file.write(get_header("INFO")+" ".join(map(str, args))+end)
 
 def vprint(*args,start='',end='\n',level=1):
     """
@@ -97,6 +124,10 @@ def vprint(*args,start='',end='\n',level=1):
     print(get_header(f"ATTACK") + get_header(f"VULN{level}",show_timestamp=False) + " ".join(map(str, args)), end='')
     print(end,end='')
 
+    if FILENAME and end != '\r':
+        with open(FILENAME,"a") as file:
+            file.write(get_header(f"ATTACK") + get_header(f"VULN{level}",show_timestamp=False) + " ".join(map(str, args)) + end)
+
 def warn(*args,start='',end='\n'):
     """
     toolbox print with timestamp and colors
@@ -104,6 +135,10 @@ def warn(*args,start='',end='\n'):
     print(start,end='')
     print(get_header("WARNING")+" ".join(map(str, args)),end='')
     print(end,end='')
+
+    if FILENAME and end != '\r':
+        with open(FILENAME,"a") as file:
+            file.write(get_header("WARNING")+" ".join(map(str, args))+end)
 
 def isint(v):
     try:     

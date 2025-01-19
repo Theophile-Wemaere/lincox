@@ -202,6 +202,7 @@ class Fuzzer:
         if body is not None:
             self.body = body
         self.STOP = False
+        self.forms_list = []
 
     def __get_file_lines(self,file_path:str)->list:
 
@@ -225,7 +226,7 @@ class Fuzzer:
             r = requests.get(f"{self.address}/{line}",headers=get_headers(),verify=False)
         elif self.method == "POST":
             r = requests.post(f"{self.address}/{line}",data=self.body,headers=get_headers(),verify=False)
-        return r.url,r.status_code,len(r.text)
+        return r.url,r.status_code,len(r.text),r.text
 
     def run(self):
 
@@ -248,10 +249,11 @@ class Fuzzer:
                         line = future_to_line[future]
                         result = future.result()
                         if result:
-                            url,code,size = result
+                            url,code,size,page = result
                             if code not in [403,404] and size != previous_size:
                                 previous_size = size
                                 toolbox.debug(f"Found path {url}")
+                                self.forms_list += search_page_for_form(page,url)
                                 results.append((url,code))
                         bar()
         except KeyboardInterrupt:
@@ -266,7 +268,7 @@ class Fuzzer:
             if url not in self.fuzzed_urls:
                 self.fuzzed_urls.append(url)
 
-        return self.fuzzed_urls
+        return self.fuzzed_urls, self.forms_list
 
 class ParaMiner:
 

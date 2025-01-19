@@ -249,8 +249,7 @@ class Target:
                     url = f"https://{self.address}"
 
                 toolbox.tprint(f"Crawling from {url}")
-                crawled_urls, found_headers, found_data, forms_list = wu.Crawler(
-                    url=[url], visited_urls=visited_urls).run()
+                crawled_urls, found_headers, found_data, forms_list = wu.Crawler(url=[url], visited_urls=visited_urls).run()
                 for url, code in crawled_urls:
                     self.crawled_urls.append((url, code))
                     visited_urls.append(url)
@@ -268,11 +267,9 @@ class Target:
                         self.forms_list.append(fl)
 
         self.crawled_urls = list(set(self.crawled_urls))
-        self.found_data = toolbox.dict_filter_duplicates(
-            self.found_data, "line")
+        self.found_data = toolbox.dict_filter_duplicates(self.found_data, "line")
 
-        toolbox.tprint(f"Found {len(self.crawled_urls)} URL(s) on {
-                       self.target} via crawling")
+        toolbox.tprint(f"Found {len(self.crawled_urls)} URL(s) on {self.target} via crawling")
 
         to_pop = []
         for i in range(len(self.forms_list)):
@@ -308,9 +305,6 @@ class Target:
             self.forms_list.pop(i-shift)
             shift += 1
 
-        toolbox.tprint(f"Found {len(self.found_headers)} interesting headers, {
-                       len(self.found_data)} interesting data and {len(self.forms_list)} forms")
-
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...", end='\r')
         time.sleep(5)
         print(' '*72, end='\r')
@@ -330,7 +324,12 @@ class Target:
                 elif service == 443:
                     url = f"https://{self.address}"
 
-                self.fuzzed_urls += wu.Fuzzer(url, wordlist).run()
+                fuzzed_urls, forms_list = wu.Fuzzer(url, wordlist).run()
+                self.fuzzed_urls += fuzzed_urls
+                for fl in forms_list:
+                    if fl not in self.forms_list:
+                        self.forms_list.append(fl)
+
 
         toolbox.tprint(f"Found {len(self.fuzzed_urls)} URL(s) on {
                        self.target} via fuzzing")
@@ -339,6 +338,9 @@ class Target:
             self.all_urls.append((url, code, "Crawler"))
         for url, code in self.fuzzed_urls:
             self.all_urls.append((url, code, "Fuzzer"))
+
+        toolbox.tprint(f"Found {len(self.found_headers)} interesting headers, {len(self.found_data)} interesting data and {len(self.forms_list)} forms")
+
 
     def enumerate_subdomains(self):
         """
@@ -421,8 +423,7 @@ class Target:
         for form in self.forms_list:
             if form["method"] == "get":
                 for param in form["parameters"]:
-                    data = [form["url"].split('#')[0].split(
-                        '?')[0], param["name"], '200', '0', 'GET', param["type"], "from_form"]
+                    data = [form["url"].split('#')[0].split('?')[0], param["name"], '200', '0', 'GET', param["type"], "from_form"]
                     if data not in self.url_parameters:
                         self.url_parameters.append(data)
 
@@ -434,9 +435,8 @@ class Target:
                 body = {}
                 for param in form['parameters']:
                     body[param['name']] = param['value']
-                self.params_to_test.append(
-                    (form['url'], [entry for entry in body], form['method'].lower()))
-
+                self.params_to_test.append((form['url'], [entry for entry in body], form['method'].lower()))
+        
         for param in self.url_parameters:
             url, parameter, origin = param[0], param[1], param[6]
             data = (url, [parameter], "get")
@@ -797,7 +797,7 @@ class Target:
         if len(msgs) == 0:
             toolbox.tprint("No CSRF misconfigurations found")
 
-    def create_report(self):
+    def create_report(self,json_dir,csv_dir):
         """
         create a report of the scan results
         """
@@ -806,5 +806,40 @@ class Target:
 
         html = reporting.html_report(self)
 
-        with open("index.html", "w") as report:
+        if not os.path.exists("output/"):
+            os.mkdir("output") 
+
+        datenow = datetime.now().strftime('_%Y-%m-%d_%H:%M')
+        target_name = self.target.replace(':','_').replace('/','')
+        report_name = "output/" + target_name + datenow + '.html'
+
+        with open(report_name, "w") as report:
             report.write(html)
+
+        if json_dir != "":
+            json_data = {}
+            for entry in dir(self):
+                if type(getattr(self,entry)) is dict or type(getattr(self,entry)) is dict:
+
+                    json_data[entry] = getattr(self,entry)
+            
+            filename = os.path.join(json_dir,target_name+datenow+'.json')
+            with open(filename,"w") as file:
+                json.dump(json_data,file,indent=1)
+
+        if csv_dir != "":
+            columns = ["url","response","source"]
+            filename = os.path.join(csv_dir,target_name+datenow+'.csv')
+            with open(filename,"w") as file:
+                
+                file.write(",".join(columns)+'\n')
+                
+                for url,code in self.crawled_urls:
+                    line = [url,str(code),"crawler"]
+                    file.write(",".join(line)+'\n')
+                
+                for url,code in self.fuzzed_urls:
+                    line = [url,str(code),"fuzzer"]
+                    file.write(",".join(line)+'\n')
+                                      
+                    
