@@ -5,6 +5,7 @@ from argparse import RawTextHelpFormatter
 from src import toolbox
 from src import scanner
 from src import webutils
+from src import server
 import pickle
 import os
 
@@ -32,7 +33,7 @@ strict : only scan the given target, (no ports and subdomains enumeration)
 medium : default value, scan target for differents services on most used ports
 full : scan for subdomains and others services on found subdomains""")
 
-    parser.add_argument("--attacks", nargs='?', dest="attacks_flag" ,const='XLSOBRMW', help="""attacks to perform : 
+    parser.add_argument("--attacks", nargs='?', dest="attacks_flag" ,const='XLSOBRM', help="""attacks to perform : 
 X : XSS
 L : LFI
 S : SQL injection
@@ -40,8 +41,7 @@ O : open-redirect
 B : brute-force
 R : SSRF
 M : misconfiguration (CSRF, headers)
-W : wordpress scan (if applicable)
-Default to 'XLSOBRMW' if this parameter is not used""")
+Default to 'XLSOBRM' if this parameter is not used""")
 
     parser.add_argument("-p","--ports", nargs='?', dest="ports" ,const='ports', help="""List of port to scan
 Use CSV (80,8080,8443) or range (10-1000)
@@ -51,6 +51,9 @@ Default : 80,443,8000,8080,8081,8443\n """)
     parser.add_argument("-sd","--subdomains", action="store_true" ,dest="subdomains", help="Perform subdomain enumeration")
     parser.add_argument("-H", "--headers", dest="headers", action="append", help="Specify a header to be included. Can be used multiple times.")
     parser.add_argument("--skip-paraminer", action="store_true", dest="skip_paraminer" , help="Skip parameter bruteforcing")
+
+    # GUI options
+    parser.add_argument("-g","--gui", nargs='?', dest="use_gui" ,const='5000', help="Can be used alone. Run GUI on given port, default to 5000")
 
     # output options
     parser.add_argument("-oN", nargs='?', dest="normal_output" ,const='', help="Output script to given directory")
@@ -69,7 +72,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
     SUBDOMAINS_ENUM = False
     SCOPE = "medium"
     FORCE = False
-    FLAGS = 'XLSOBRMW'
+    FLAGS = 'XLSOBRM'
 
     # select scanning mode
     if args.mode:
@@ -93,7 +96,7 @@ Default : 80,443,8000,8080,8081,8443\n """)
     if ATTACK_MODE and args.attacks_flag:
         FLAGS = ''
         for c in args.attacks_flag:
-            if c.upper() in 'XLSOBRMW':
+            if c.upper() in 'XLSOBRM':
                 FLAGS += c.upper()
 
     # set custom headers:
@@ -147,7 +150,11 @@ Default : 80,443,8000,8080,8081,8443\n """)
     if not args.quiet:
         toolbox.print_banner()
 
-    if args.target:
+    if args.use_gui:
+        SHOW_HELP = False
+        server.run(args.use_gui)
+    
+    elif args.target:
         SHOW_HELP = False
 
         if normal_output:

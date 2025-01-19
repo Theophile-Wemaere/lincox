@@ -38,6 +38,7 @@ class Target:
         self.found_misconf = []
         self.params_to_test = []
         self.services = []
+        self.headers = wu.HEADERS
 
     def initialize(self):
         """
@@ -341,7 +342,6 @@ class Target:
 
         toolbox.tprint(f"Found {len(self.found_headers)} interesting headers, {len(self.found_data)} interesting data and {len(self.forms_list)} forms")
 
-
     def enumerate_subdomains(self):
         """
         enumerate subdomains
@@ -443,6 +443,9 @@ class Target:
             if data not in self.params_to_test and origin != "from_form":
                 self.params_to_test.append(data)
 
+        toolbox.tprint(f"Found {len(self.url_parameters)} GET parameters to tests")
+        toolbox.tprint(f"Found {len(self.params_to_test)} parameters to tests")
+
     def search_xss(self):
         """
         search for reflected XSS in GET parameters
@@ -458,6 +461,8 @@ class Target:
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...", end='\r')
         time.sleep(5)
         print(' '*72, end='\r')
+
+        toolbox.aprint(f"Starting XSS testing on {len(self.url_parameters)} GET parameters")
 
         msgs = []
         with alive_bar(len(self.url_parameters), title=toolbox.get_header("ATTACK")+f"Testing XSS on {len(self.url_parameters)} parameters", enrich_print=False) as bar:
@@ -499,6 +504,8 @@ class Target:
         time.sleep(5)
         print(' '*72, end='\r')
 
+        toolbox.aprint(f"Starting LFI testing on {len(self.params_to_test)} parameters")        
+
         msgs = []
         with alive_bar(len(self.params_to_test), title=toolbox.get_header("ATTACK")+f"Testing LFI on found forms and parameters", enrich_print=False) as bar:
             for url, parameters, method in self.params_to_test:
@@ -529,6 +536,8 @@ class Target:
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...", end='\r')
         time.sleep(5)
         print(' '*72, end='\r')
+
+        toolbox.aprint(f"Starting SQL injections testing on {len(self.params_to_test)} parameters")        
 
         command = ""
 
@@ -582,6 +591,8 @@ class Target:
         time.sleep(5)
         print(' '*72, end='\r')
 
+        toolbox.aprint(f"Starting LFI testing on {len(self.url_parameters)} GET parameters")        
+
         msgs = []
         with alive_bar(len(self.url_parameters), title=toolbox.get_header("ATTACK")+f"Searching open redirect in GET parameters", enrich_print=False) as bar:
             for param in self.url_parameters:
@@ -627,6 +638,8 @@ class Target:
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...", end='\r')
         time.sleep(5)
         print(' '*72, end='\r')
+
+        toolbox.aprint(f"Starting brute-forcing on {len(forms_to_test)} forms")        
 
         to_skip_url = [
             "register",
@@ -679,6 +692,8 @@ class Target:
         time.sleep(5)
         print(' '*72, end='\r')
 
+        toolbox.aprint(f"Starting SSRF testing on {len(self.params_to_test)} parameters")        
+
         msgs = []
         with alive_bar(len(self.params_to_test), title=toolbox.get_header("ATTACK")+f"Testing SSRF on found forms and parameters", enrich_print=False) as bar:
             for url, parameters, method in self.params_to_test:
@@ -705,6 +720,8 @@ class Target:
         toolbox.tprint(f"Sleeping 5 sec to avoid being blocked...", end='\r')
         time.sleep(5)
         print(' '*72, end='\r')
+
+        toolbox.aprint(f"Starting misconfigurations research")        
 
         # test for missing Headers
         url = ""
@@ -826,6 +843,7 @@ class Target:
             filename = os.path.join(json_dir,target_name+datenow+'.json')
             with open(filename,"w") as file:
                 json.dump(json_data,file,indent=1)
+            toolbox.tprint(f"Created JSON file {filename}")
 
         if csv_dir != "":
             columns = ["url","response","source"]
@@ -841,5 +859,10 @@ class Target:
                 for url,code in self.fuzzed_urls:
                     line = [url,str(code),"fuzzer"]
                     file.write(",".join(line)+'\n')
+            toolbox.tprint(f"Created CSV file {filename}")
+
+        toolbox.tprint(f"Created HTML report {report_name}")
+
+        return report_name
                                       
                     

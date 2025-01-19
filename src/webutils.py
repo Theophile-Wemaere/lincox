@@ -83,7 +83,7 @@ class Crawler:
                     for entry in results:
                         entry["url"] = url
                         if entry['line'] not in self.found_data_line:
-                            toolbox.debug(f"Found {entry['name']} : {entry['line']}")
+                            # toolbox.debug(f"Found {entry['name']} : {entry['line']}")
                             self.found_data.append(entry)
                             self.found_data_line.append(entry['line'])
 

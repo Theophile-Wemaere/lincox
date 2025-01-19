@@ -12,11 +12,15 @@ def set_debug(status):
     DEBUG = status
     print(colored("DEBUG = True","black","on_red",attrs=["bold"]))
 
-def log_to_dir(directory,filename):
+def log_to_dir(directory='',filename='',override=False):
 
     global FILENAME
-    timestamp = datetime.now().strftime('_%Y-%m-%d_%H_%M')
-    FILENAME = os.path.join(directory,filename+f'{timestamp}.lincox')
+    if override:
+        FILENAME = filename
+    else:
+        timestamp = datetime.now().strftime('_%Y-%m-%d_%H_%M')
+        FILENAME = os.path.join(directory,filename+f'{timestamp}.lincox')
+
     print(colored(f"Logging script output to {FILENAME}","black","on_green",attrs=["bold"]))
 
 def print_banner():
@@ -111,6 +115,18 @@ def tprint(*args,start='',end='\n'):
     if FILENAME and end != '\r':
         with open(FILENAME,"a") as file:
             file.write(get_header("INFO")+" ".join(map(str, args))+end)
+
+def aprint(*args,start='',end='\n'):
+    """
+    toolbox print with timestamp and colors
+    """
+    print(start,end='')
+    print(get_header("ATTACK")+" ".join(map(str, args)),end='')
+    print(end,end='')
+
+    if FILENAME and end != '\r':
+        with open(FILENAME,"a") as file:
+            file.write(get_header("ATTACK")+" ".join(map(str, args))+end)
 
 def vprint(*args,start='',end='\n',level=1):
     """

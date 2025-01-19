@@ -5,4 +5,5 @@ requests
 bs4
 termcolor
 selenium
-selenium-wire
+flask
+flask_socketio
